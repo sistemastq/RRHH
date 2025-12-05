@@ -1,12 +1,146 @@
 // public/employees.js
+// Gestión de empleados (consulta/edición/eliminación) con CSP-friendly JS
+
 document.addEventListener("DOMContentLoaded", () => {
+  // --------------- Helpers ---------------
+  const $ = (sel, ctx = document) => ctx.querySelector(sel);
+  const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
+
+  function setLoading(show, message) {
+    const loadingModal = $("#employeesLoadingModal");
+    const loadingText = $("#employeesLoadingText");
+    if (!loadingModal) return;
+    if (loadingText && message) loadingText.textContent = message;
+    if (show) {
+      loadingModal.classList.remove("hidden");
+      loadingModal.classList.add("flex");
+    } else {
+      loadingModal.classList.add("hidden");
+      loadingModal.classList.remove("flex");
+    }
+  }
+
+  // Modal de resultado (éxito / error) creado dinámicamente
+  function ensureResultModal() {
+    let modal = $("#resultModal");
+    if (modal) return modal;
+
+    const wrapper = document.createElement("div");
+    wrapper.id = "resultModal";
+    wrapper.className =
+      "fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm";
+    wrapper.innerHTML = `
+      <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900">
+        <div class="flex items-start gap-3">
+          <div id="resultIconWrapper" class="flex h-10 w-10 items-center justify-center rounded-full">
+            <span id="resultIcon" class="material-symbols-outlined text-2xl">info</span>
+          </div>
+          <div class="flex-1">
+            <h2 id="resultTitle" class="text-sm font-semibold text-slate-900 dark:text-slate-100"></h2>
+            <p id="resultMessage" class="mt-2 text-sm text-slate-700 dark:text-slate-300"></p>
+            <div class="mt-4 flex justify-end gap-2">
+              <button id="resultClose" type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">Cerrar</button>
+              <button id="resultOk" type="button" class="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90">Aceptar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(wrapper);
+
+    const close = () => {
+      wrapper.classList.add("hidden");
+      wrapper.classList.remove("flex");
+    };
+    $("#resultClose", wrapper)?.addEventListener("click", close);
+    $("#resultOk", wrapper)?.addEventListener("click", close);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !wrapper.classList.contains("hidden")) close();
+    });
+    return wrapper;
+  }
+
+  function openResultModal({ type = "info", title = "", message = "" }) {
+    const modal = ensureResultModal();
+    const iconWrap = $("#resultIconWrapper", modal);
+    const icon = $("#resultIcon", modal);
+    const t = $("#resultTitle", modal);
+    const m = $("#resultMessage", modal);
+
+    // reset clases
+    iconWrap.className =
+      "flex h-10 w-10 items-center justify-center rounded-full";
+    if (type === "success") {
+      iconWrap.classList.add(
+        "bg-emerald-100",
+        "text-emerald-600",
+        "dark:bg-emerald-900/40",
+        "dark:text-emerald-300"
+      );
+      icon.textContent = "check_circle";
+    } else if (type === "error") {
+      iconWrap.classList.add(
+        "bg-red-100",
+        "text-red-600",
+        "dark:bg-red-900/40",
+        "dark:text-red-300"
+      );
+      icon.textContent = "error";
+    } else {
+      iconWrap.classList.add(
+        "bg-sky-100",
+        "text-sky-600",
+        "dark:bg-sky-900/40",
+        "dark:text-sky-300"
+      );
+      icon.textContent = "info";
+    }
+
+    t.textContent = title;
+    m.textContent = message;
+
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
+
+  // Añadir botón “Actualizar” arriba de la tabla, sin tocar el HTML
+  function injectTopRefreshButton() {
+    const summary = $("#employeesSummary");
+    if (!summary) return;
+    const container = summary.parentElement; // el <div class="flex items-center justify-between">
+    if (!container) return;
+
+    // si ya existe, no duplicar
+    if ($("#tableRefreshBtn", container)) return;
+
+    const btn = document.createElement("button");
+    btn.id = "tableRefreshBtn";
+    btn.type = "button";
+    btn.className =
+      "inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800";
+    btn.innerHTML =
+      '<span class="material-symbols-outlined text-[16px]">refresh</span> Actualizar';
+
+    // lo ponemos a la izquierda del summary (o donde prefieras)
+    container.insertBefore(btn, summary);
+    btn.addEventListener("click", () => loadEmpleados(true));
+  }
+
+  // Escape para HTML (pintar celdas seguras)
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // --------------- DOM refs ---------------
   const tbody = document.getElementById("employeesTableBody");
   const summary = document.getElementById("employeesSummary");
   const searchInput = document.getElementById("globalSearch");
   const reloadBtn = document.getElementById("reloadBtn");
-
-  const loadingModal = document.getElementById("employeesLoadingModal");
-  const loadingText = document.getElementById("employeesLoadingText");
 
   const goDashboardBtn = document.getElementById("goDashboardBtn");
   const logoutBtn = document.getElementById("logoutBtn");
@@ -58,112 +192,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const deleteCancelBtn = document.getElementById("deleteCancelBtn");
   const deleteConfirmBtn = document.getElementById("deleteConfirmBtn");
 
-  // ===== Helpers =====
-  function setLoading(show, message) {
-    if (!loadingModal) return;
-    if (loadingText && message) loadingText.textContent = message;
-    if (show) {
-      loadingModal.classList.remove("hidden");
-      loadingModal.classList.add("flex");
-    } else {
-      loadingModal.classList.add("hidden");
-      loadingModal.classList.remove("flex");
-    }
-  }
+  // --------------- Estado ---------------
+  let empleados = [];
+  let filtered = [];
+  let empleadoToDelete = null;
 
-  function escapeHtml(value) {
-    return String(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
-  function nullIfEmpty(v) {
-    const s = (v ?? "").toString().trim();
-    return s === "" ? null : s;
-  }
-  function numberOrNull(v) {
-    const s = (v ?? "").toString().trim();
-    if (s === "") return null;
-    const n = Number(s);
-    return Number.isFinite(n) ? n : null;
-  }
-
-  function apiTieneCampoActivo(id) {
-    const emp = empleados.find((e) => e.id === Number(id));
-    return emp && Object.prototype.hasOwnProperty.call(emp, "activo");
-  }
-
-  // Modal de resultado (éxito/error) inyectable si no existe en la página
-  function ensureResultModal() {
-    let modal = document.getElementById("resultModalGeneric");
-    if (modal) return modal;
-
-    modal = document.createElement("div");
-    modal.id = "resultModalGeneric";
-    modal.className =
-      "fixed inset-0 z-40 hidden items-center justify-center bg-black/40 backdrop-blur-sm";
-    modal.innerHTML = `
-      <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900">
-        <div class="flex items-start gap-3">
-          <div id="rmIconWrap" class="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
-            <span id="rmIcon" class="material-symbols-outlined text-2xl">check_circle</span>
-          </div>
-          <div class="flex-1">
-            <h2 id="rmTitle" class="text-sm font-semibold text-slate-900 dark:text-slate-100">Listo</h2>
-            <p id="rmMsg" class="mt-2 text-sm text-slate-700 dark:text-slate-300">Operación realizada.</p>
-            <div class="mt-4 flex justify-end">
-              <button id="rmClose" type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">Cerrar</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    modal.querySelector("#rmClose").addEventListener("click", () => {
-      modal.classList.add("hidden");
-      modal.classList.remove("flex");
-    });
-    return modal;
-  }
-
-  function openResultModal({ type = "success", title = "Listo", message = "" }) {
-    const modal = ensureResultModal();
-    const wrap = modal.querySelector("#rmIconWrap");
-    const icon = modal.querySelector("#rmIcon");
-    const t = modal.querySelector("#rmTitle");
-    const m = modal.querySelector("#rmMsg");
-
-    // reset estilos
-    wrap.className =
-      "flex h-10 w-10 items-center justify-center rounded-full";
-    if (type === "error") {
-      wrap.classList.add(
-        "bg-red-100",
-        "text-red-600",
-        "dark:bg-red-900/40",
-        "dark:text-red-300"
-      );
-      icon.textContent = "error";
-    } else {
-      wrap.classList.add(
-        "bg-emerald-100",
-        "text-emerald-600",
-        "dark:bg-emerald-900/40",
-        "dark:text-emerald-300"
-      );
-      icon.textContent = "check_circle";
-    }
-    t.textContent = title;
-    m.textContent = message || (type === "error" ? "Se produjo un error." : "Operación realizada con éxito.");
-
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
-  }
-
-  // ===== Navegación básica =====
+  // --------------- Navegación y sesión ---------------
   if (backBtn) {
     backBtn.addEventListener("click", () => {
       if (window.history.length > 1) {
@@ -173,11 +207,13 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
   if (goDashboardBtn) {
     goDashboardBtn.addEventListener("click", () => {
       window.location.href = "/dashboard";
     });
   }
+
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
       try {
@@ -187,13 +223,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ===== View modal =====
+  // --------------- VIEW MODAL ---------------
   function openViewModal(emp) {
     if (!viewModal) return;
 
     viewNombre.textContent = emp.nombre || "—";
     viewDocumento.textContent = `${emp.tipo_documento || "—"} ${emp.documento || ""}`.trim();
     viewCargo.textContent = emp.cargo || "—";
+
     const fi = emp.fecha_afiliacion || "—";
     const fr = emp.fecha_retiro || "Activo";
     viewFechas.textContent = `${fi} → ${fr}`;
@@ -204,7 +241,7 @@ document.addEventListener("DOMContentLoaded", () => {
             style: "currency",
             currency: "COP",
             maximumFractionDigits: 0,
-          }).format(emp.salario)
+          }).format(Number(emp.salario))
         : "—";
 
     const tel = emp.telefono ? String(emp.telefono) : "—";
@@ -225,15 +262,26 @@ document.addEventListener("DOMContentLoaded", () => {
     viewModal.classList.remove("hidden");
     viewModal.classList.add("flex");
   }
+
   function closeViewModal() {
     if (!viewModal) return;
     viewModal.classList.add("hidden");
     viewModal.classList.remove("flex");
   }
-  if (viewModalClose) viewModalClose.addEventListener("click", closeViewModal);
-  if (viewCloseBtn) viewCloseBtn.addEventListener("click", closeViewModal);
 
-  // ===== Edit modal =====
+  viewModalClose?.addEventListener("click", closeViewModal);
+  viewCloseBtn?.addEventListener("click", closeViewModal);
+
+  // Cerrar modales con ESC
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeViewModal();
+      closeEditModal();
+      closeDeleteModal();
+    }
+  });
+
+  // --------------- EDIT MODAL ---------------
   function openEditModal(emp) {
     if (!editModal) return;
     clearEditAlert();
@@ -260,26 +308,29 @@ document.addEventListener("DOMContentLoaded", () => {
     editModal.classList.remove("hidden");
     editModal.classList.add("flex");
   }
+
   function closeEditModal() {
     if (!editModal) return;
     editModal.classList.add("hidden");
     editModal.classList.remove("flex");
   }
+
   function showEditAlert(message) {
     if (!editModalAlert) return;
     editModalAlert.textContent = message;
     editModalAlert.classList.remove("hidden");
   }
+
   function clearEditAlert() {
     if (!editModalAlert) return;
     editModalAlert.textContent = "";
     editModalAlert.classList.add("hidden");
   }
-  if (editModalClose) editModalClose.addEventListener("click", closeEditModal);
-  if (editCancelBtn) editCancelBtn.addEventListener("click", closeEditModal);
 
-  // ===== Delete modal =====
-  let empleadoToDelete = null;
+  editModalClose?.addEventListener("click", closeEditModal);
+  editCancelBtn?.addEventListener("click", closeEditModal);
+
+  // --------------- DELETE MODAL ---------------
   function openDeleteModal(emp) {
     empleadoToDelete = emp;
     if (!deleteModal) return;
@@ -289,13 +340,16 @@ document.addEventListener("DOMContentLoaded", () => {
     deleteModal.classList.remove("hidden");
     deleteModal.classList.add("flex");
   }
+
   function closeDeleteModal() {
     empleadoToDelete = null;
     if (!deleteModal) return;
     deleteModal.classList.add("hidden");
     deleteModal.classList.remove("flex");
   }
-  if (deleteCancelBtn) deleteCancelBtn.addEventListener("click", closeDeleteModal);
+
+  deleteCancelBtn?.addEventListener("click", closeDeleteModal);
+
   if (deleteConfirmBtn) {
     deleteConfirmBtn.addEventListener("click", async () => {
       if (!empleadoToDelete) return;
@@ -306,17 +360,28 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const res = await fetch(`/api/formularios/${id}`, { method: "DELETE" });
         if (!res.ok) {
-          const txt = await res.text();
-          console.error("Error al eliminar", txt);
-          openResultModal({ type: "error", title: "No se pudo eliminar", message: txt || "Intenta nuevamente." });
+          console.error("Error al eliminar", await res.text());
+          openResultModal({
+            type: "error",
+            title: "No se pudo eliminar",
+            message: "Intenta nuevamente o revisa el servidor.",
+          });
         } else {
           empleados = empleados.filter((e) => e.id !== id);
           aplicarFiltro();
-          openResultModal({ type: "success", title: "Eliminado", message: "El registro fue eliminado correctamente." });
+          openResultModal({
+            type: "success",
+            title: "Empleado eliminado",
+            message: "El registro fue eliminado correctamente.",
+          });
         }
       } catch (err) {
         console.error(err);
-        openResultModal({ type: "error", title: "Error de conexión", message: "No se pudo contactar el servidor." });
+        openResultModal({
+          type: "error",
+          title: "Error de conexión",
+          message: "No fue posible comunicarse con el servidor.",
+        });
       } finally {
         deleteConfirmBtn.disabled = false;
         closeDeleteModal();
@@ -325,24 +390,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Cerrar modales con ESC
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeViewModal();
-      closeEditModal();
-      closeDeleteModal();
-      const rm = document.getElementById("resultModalGeneric");
-      if (rm && !rm.classList.contains("hidden")) {
-        rm.classList.add("hidden");
-        rm.classList.remove("flex");
-      }
-    }
-  });
-
-  // ===== Tabla =====
-  let empleados = [];
-  let filtered = [];
-
+  // --------------- TABLA ---------------
   function renderTabla() {
     if (!tbody) return;
     if (!filtered.length) {
@@ -355,10 +403,10 @@ document.addEventListener("DOMContentLoaded", () => {
       .map((e) => {
         return `
       <tr class="bg-white text-[11px] hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800">
-        <td class="max-w-[180px] truncate px-2 py-1">${escapeHtml(e.nombre || "")}</td>
-        <td class="px-2 py-1">${escapeHtml(e.documento || "")}</td>
-        <td class="max-w-[140px] truncate px-2 py-1">${escapeHtml(e.cargo || "")}</td>
-        <td class="px-2 py-1">${escapeHtml(e.fecha_afiliacion || "")}</td>
+        <td class="max-w-[180px] truncate px-2 py-1">${escapeHtml(e.nombre)}</td>
+        <td class="px-2 py-1">${escapeHtml(e.documento)}</td>
+        <td class="max-w-[140px] truncate px-2 py-1">${escapeHtml(e.cargo)}</td>
+        <td class="px-2 py-1">${escapeHtml(e.fecha_afiliacion)}</td>
         <td class="px-2 py-1">${escapeHtml(e.fecha_retiro || "")}</td>
         <td class="max-w-[160px] truncate px-2 py-1">${escapeHtml(e.correo || "")}</td>
         <td class="px-2 py-1">${escapeHtml(e.telefono ?? "")}</td>
@@ -396,22 +444,19 @@ document.addEventListener("DOMContentLoaded", () => {
     tbody.innerHTML = rowsHtml;
 
     // handlers de botones
-    const viewBtns = tbody.querySelectorAll(".btn-view");
-    viewBtns.forEach((btn) => {
+    $$(".btn-view", tbody).forEach((btn) => {
       btn.addEventListener("click", async () => {
         const id = Number(btn.dataset.id);
         setLoading(true, "Consultando información del empleado...");
         try {
           const res = await fetch(`/api/formularios/${id}`);
-          const txt = await res.text();
-          let emp = null;
-          try { emp = txt ? JSON.parse(txt) : null; } catch { emp = null; }
+          const emp = await res.json();
           if (!res.ok) {
-            console.error("Error consultando empleado:", emp || txt);
+            console.error("Error consultando empleado:", emp);
             openResultModal({
               type: "error",
               title: "No se pudo consultar",
-              message: (emp && (emp.error || emp.message)) || txt || "Intenta de nuevo.",
+              message: emp?.error || "Intenta nuevamente.",
             });
             return;
           }
@@ -421,7 +466,7 @@ document.addEventListener("DOMContentLoaded", () => {
           openResultModal({
             type: "error",
             title: "Error de conexión",
-            message: "No se pudo contactar el servidor.",
+            message: "Revisa la red o el servidor.",
           });
         } finally {
           setLoading(false);
@@ -429,8 +474,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-    const editBtns = tbody.querySelectorAll(".btn-edit");
-    editBtns.forEach((btn) => {
+    $$(".btn-edit", tbody).forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = Number(btn.dataset.id);
         const emp = empleados.find((e) => e.id === id);
@@ -438,8 +482,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-    const deleteBtns = tbody.querySelectorAll(".btn-delete");
-    deleteBtns.forEach((btn) => {
+    $$(".btn-delete", tbody).forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = Number(btn.dataset.id);
         const emp = empleados.find((e) => e.id === id);
@@ -467,29 +510,29 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTabla();
   }
 
-  if (searchInput) searchInput.addEventListener("input", aplicarFiltro);
-  if (reloadBtn) reloadBtn.addEventListener("click", () => loadEmpleados(true));
+  searchInput?.addEventListener("input", aplicarFiltro);
+  reloadBtn?.addEventListener("click", () => loadEmpleados(true));
 
+  // --------------- Carga de datos ---------------
   async function loadEmpleados(forceText) {
     setLoading(true, forceText ? "Recargando empleados..." : "Cargando empleados...");
     try {
       const res = await fetch("/api/formularios");
-      const txt = await res.text();
-      let data = [];
-      try { data = txt ? JSON.parse(txt) : []; } catch { data = []; }
+      const data = (await res.json()) || [];
       empleados = Array.isArray(data) ? data : [];
       aplicarFiltro();
     } catch (err) {
       console.error(err);
       if (summary) {
-        summary.textContent = "Error al cargar empleados. Verifica la conexión o el servidor.";
+        summary.textContent =
+          "Error al cargar empleados. Verifica la conexión o el servidor.";
       }
     } finally {
       setLoading(false);
     }
   }
 
-  // ===== Guardar edición (PUT) =====
+  // --------------- Guardar edición (PUT) ---------------
   if (editForm) {
     editForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -501,37 +544,33 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Estado previo para detectar transición activo/inactivo
-      const prev = empleados.find((e) => e.id === Number(id));
-      const prevTeniaRetiro = !!(prev && prev.fecha_retiro);
+      // Normalización
+      const salarioNum =
+        editSalario.value && !Number.isNaN(Number(editSalario.value))
+          ? Number(editSalario.value)
+          : null;
 
       const payload = {
-        nombre: nullIfEmpty(editNombre.value),
-        tipo_documento: nullIfEmpty(editTipoDocumento.value),
-        documento: nullIfEmpty(editDocumento.value),
-        sexo: nullIfEmpty(editSexo.value),
-        fecha_nacimiento: nullIfEmpty(editFechaNacimiento.value),
-        cargo: nullIfEmpty(editCargo.value),
-        fecha_afiliacion: nullIfEmpty(editFechaAfiliacion.value),
-        fecha_retiro: nullIfEmpty(editFechaRetiro.value), // null o 'YYYY-MM-DD'
-        salario: numberOrNull(editSalario.value),
-        telefono: nullIfEmpty(editTelefono.value),
-        correo: nullIfEmpty(editCorreo.value),
-        direccion_residencia: nullIfEmpty(editDireccion.value),
-        EPS: nullIfEmpty(editEPS.value),
-        ARL: nullIfEmpty(editARL.value),
-        fondo_pension: nullIfEmpty(editFondoPension.value),
-        caja_compensacion: nullIfEmpty(editCajaCompensacion.value),
-        // OPCIONAL: info_adicional ya NO es obligatoria
-        info_adicional: nullIfEmpty(editInfoAdicional.value),
+        nombre: editNombre.value.trim(),
+        tipo_documento: editTipoDocumento.value,
+        documento: editDocumento.value.trim(),
+        sexo: editSexo.value,
+        fecha_nacimiento: editFechaNacimiento.value || null,
+        cargo: editCargo.value.trim(),
+        fecha_afiliacion: editFechaAfiliacion.value || null,
+        fecha_retiro: editFechaRetiro.value || null,
+        salario: salarioNum,
+        telefono: editTelefono.value.trim(),
+        correo: editCorreo.value.trim(),
+        direccion_residencia: editDireccion.value.trim(),
+        EPS: editEPS.value.trim(),
+        ARL: editARL.value.trim(),
+        fondo_pension: editFondoPension.value.trim(),
+        caja_compensacion: editCajaCompensacion.value.trim(),
+        info_adicional: editInfoAdicional.value.trim(),
       };
 
-      // Si la API maneja 'activo', lo enviamos acorde a fecha_retiro
-      if (apiTieneCampoActivo(id)) {
-        payload.activo = payload.fecha_retiro ? 0 : 1;
-      }
-
-      // Validación mínima front (sin info_adicional)
+      // Obligatorios (info_adicional ya NO es obligatorio)
       const obligatorios = [
         "nombre",
         "tipo_documento",
@@ -540,26 +579,23 @@ document.addEventListener("DOMContentLoaded", () => {
         "fecha_nacimiento",
         "cargo",
         "fecha_afiliacion",
-        "salario",
         "telefono",
       ];
       const faltan = obligatorios.filter(
-        (campo) => payload[campo] === null || payload[campo] === undefined
+        (campo) => !payload[campo] || String(payload[campo]).trim() === ""
       );
       if (faltan.length > 0) {
-        showEditAlert("Revisa los campos obligatorios marcados con *. No pueden estar vacíos.");
+        showEditAlert(
+          "Revisa los campos obligatorios marcados con *. No pueden estar vacíos."
+        );
         return;
       }
 
-      // Regla típica: retiro >= afiliación
-      if (payload.fecha_retiro && payload.fecha_afiliacion) {
-        const fi = new Date(payload.fecha_afiliacion);
-        const fr = new Date(payload.fecha_retiro);
-        if (fr < fi) {
-          showEditAlert("La fecha de salida no puede ser anterior a la fecha de ingreso.");
-          return;
-        }
-      }
+      // Estado activo según fecha_retiro (SIEMPRE mandar)
+      const prev = empleados.find((e) => String(e.id) === String(id)) || {};
+      const prevTeniaRetiro = !!prev.fecha_retiro;
+      const becomingInactive = !!payload.fecha_retiro;
+      payload.activo = becomingInactive ? 0 : 1;
 
       editSaveBtn.disabled = true;
       setLoading(true, "Guardando cambios del empleado...");
@@ -571,39 +607,52 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify(payload),
         });
 
-        const txt = await res.text();
+        // Intenta leer JSON; si 204 o vacío, data será null
         let data = null;
-        try { data = txt ? JSON.parse(txt) : null; } catch { data = null; }
+        try {
+          data = await res.json();
+        } catch {}
 
         if (!res.ok) {
+          console.error("Error actualizando empleado:", data);
           const msg =
-            (data && (data.error || data.message || data.details)) ||
-            (txt || "No se pudo actualizar el empleado.");
-          console.error("Error actualizando empleado:", data || txt);
+            (data && (data.error || data.message)) ||
+            "No se pudo actualizar el empleado. Intenta nuevamente.";
           showEditAlert(msg);
+          openResultModal({ type: "error", title: "No se pudo guardar", message: msg });
           return;
         }
 
+        // Actualizar en memoria / UI
         const updated = (data && (data.data || data)) || {};
-        const idx = empleados.findIndex((e) => e.id === Number(id));
+        const idx = empleados.findIndex((e) => Number(e.id) === Number(id));
         if (idx !== -1) {
-          empleados[idx] = { ...empleados[idx], ...updated };
+          empleados[idx] = {
+            ...empleados[idx],
+            ...updated,
+            // Asegura consistencia local aunque el backend no devuelva 'activo'
+            activo: becomingInactive ? 0 : 1,
+            fecha_retiro: payload.fecha_retiro, // alinear
+          };
         }
 
         aplicarFiltro();
         closeEditModal();
 
-        const ahoraTieneRetiro = !!payload.fecha_retiro;
+        // Mensaje contextual
         let msg = "El registro del empleado se actualizó correctamente.";
-        if (!prevTeniaRetiro && ahoraTieneRetiro) {
+        if (!prevTeniaRetiro && becomingInactive) {
           msg = "El empleado quedó INACTIVO porque se estableció una fecha de salida.";
-        } else if (prevTeniaRetiro && !ahoraTieneRetiro) {
+        } else if (prevTeniaRetiro && !becomingInactive) {
           msg = "El empleado quedó ACTIVO porque se eliminó la fecha de salida.";
         }
         openResultModal({ type: "success", title: "Cambios guardados", message: msg });
       } catch (err) {
         console.error(err);
-        showEditAlert("Error de conexión al actualizar. Verifica tu red o el servidor.");
+        const msg =
+          "Error de conexión al actualizar. Verifica tu red o el servidor.";
+        showEditAlert(msg);
+        openResultModal({ type: "error", title: "Error de conexión", message: msg });
       } finally {
         editSaveBtn.disabled = false;
         setLoading(false);
@@ -611,6 +660,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Cargar empleados al inicio
+  // --------------- Init ---------------
+  injectTopRefreshButton(); // botón “Actualizar” arriba de la tabla
   loadEmpleados(false);
 });
