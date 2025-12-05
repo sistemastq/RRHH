@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html class="light" lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Panel de Control RRHH</title>
+
+    <!-- Tailwind + config (misma paleta que index) -->
+    <script id="tailwind-config">
+      tailwind = {
+        config: {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                primary: "#0ea5e9",
+                "primary-dark": "#0284c7",
+                "background-light": "#e0f2fe",
+                "background-dark": "#020617",
+              },
+              fontFamily: { display: ["Manrope", "sans-serif"] },
+              borderRadius: {
+                DEFAULT: "0.25rem",
+                lg: "0.5rem",
+                xl: "0.75rem",
+                full: "9999px",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <!-- Fuentes -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Estilos propios -->
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+
+  <body
+    class="font-display bg-background-light text-slate-900 dark:bg-background-dark dark:text-slate-50"
+  >
+    <!-- Modal de carga general -->
+    <div
+      id="dashboardLoadingModal"
+      class="fixed inset-0 z-40 hidden items-center justify-center bg-black/40 backdrop-blur-sm"
+    >
+      <div
+        class="flex w-full max-w-xs flex-col items-center gap-3 rounded-2xl bg-white px-6 py-5 text-center shadow-lg dark:bg-slate-900"
+      >
+        <div
+          class="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"
+        ></div>
+        <p
+          id="dashboardLoadingText"
+          class="text-sm text-slate-900 dark:text-slate-100"
+        >
+          Cargando información del panel...
+        </p>
+      </div>
+    </div>
+
+    <!-- Modal confirmación de cierre de sesión -->
+    <div
+      id="logoutConfirmModal"
+      class="fixed inset-0 z-40 hidden items-center justify-center bg-black/40 backdrop-blur-sm"
+    >
+      <div
+        class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900"
+      >
+        <div class="mb-3 flex items-center gap-3">
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-primary"
+          >
+            <span class="material-symbols-outlined text-[22px]">logout</span>
+          </div>
+          <h2 class="text-sm font-semibold">Cerrar sesión</h2>
+        </div>
+        <p class="mb-4 text-sm text-slate-600 dark:text-slate-300">
+          ¿Seguro que quieres cerrar sesión? Tendrás que volver a ingresar tu
+          correo y contraseña.
+        </p>
+        <div class="flex justify-end gap-2">
+          <button
+            id="logoutCancelBtn"
+            class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            Cancelar
+          </button>
+          <button
+            id="logoutConfirmBtn"
+            class="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-dark"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="relative flex min-h-screen w-full flex-col overflow-x-hidden group/design-root"
+    >
+      <!-- Top App Bar -->
+      <div
+        class="sticky top-0 z-10 bg-background-light/80 px-4 pb-2 pt-4 backdrop-blur-sm dark:bg-background-dark/80"
+      >
+        <div class="flex h-12 items-center justify-between gap-3">
+          <div>
+            <p class="text-lg font-bold">Panel de Control</p>
+            <p
+              id="dashboardGreeting"
+              class="text-sm text-slate-600 dark:text-slate-400"
+            >
+              Hola, equipo de RRHH
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <!-- Botón a Employees (modificaciones) -->
+            <button
+              id="goToEmployeesBtn"
+              type="button"
+              class="hidden items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-primary-dark sm:inline-flex"
+            >
+              <span class="material-symbols-outlined text-[16px]">
+                manage_accounts
+              </span>
+              Modificaciones
+            </button>
+
+            <!-- Botón a Form -->
+            <button
+              id="goToFormBtn"
+              type="button"
+              class="hidden items-center gap-1 rounded-full border border-sky-300 px-3 py-1.5 text-xs font-medium text-slate-800 hover:bg-sky-50 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800 sm:inline-flex"
+            >
+              <span class="material-symbols-outlined text-[16px]">
+                person_add
+              </span>
+              Formulario
+            </button>
+
+            <!-- Cerrar sesión (abre modal) -->
+            <button
+              id="logoutBtn"
+              type="button"
+              class="inline-flex items-center gap-1 rounded-full border border-sky-300 px-3 py-1.5 text-xs font-medium text-slate-800 hover:bg-sky-50 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+            >
+              <span class="material-symbols-outlined text-[16px]">
+                logout
+              </span>
+              Cerrar sesión
+            </button>
+
+            <div class="relative h-9 w-9">
+              <img
+                class="h-9 w-9 rounded-full object-cover ring-2 ring-primary/30"
+                src="https://ui-avatars.com/api/?name=RRHH&background=0ea5e9&color=ffffff"
+                alt="Avatar usuario"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contenido principal -->
+      <main class="flex-grow pb-24">
+        <!-- Stats Section -->
+        <div class="flex flex-wrap gap-4 p-4">
+          <div
+            class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl border border-sky-200 bg-white p-4 ring-1 ring-sky-100 dark:border-slate-700 dark:bg-slate-900 dark:ring-0"
+          >
+            <p class="text-sm font-medium">Total de Empleados</p>
+            <div class="flex items-end gap-2">
+              <p
+                id="statTotalEmpleados"
+                class="text-3xl font-bold leading-tight"
+              >
+                —
+              </p>
+              <p class="pb-1 text-xs font-medium text-emerald-600">
+                Datos en vivo
+              </p>
+            </div>
+          </div>
+
+          <div
+            class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl border border-sky-200 bg-white p-4 ring-1 ring-sky-100 dark:border-slate-700 dark:bg-slate-900 dark:ring-0"
+          >
+            <p class="text-sm font-medium">Empleados Activos</p>
+            <div class="flex items-end gap-2">
+              <p
+                id="statEmpleadosActivos"
+                class="text-3xl font-bold leading-tight"
+              >
+                —
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Accesos rápidos -->
+        <h3
+          class="px-4 pb-2 pt-4 text-lg font-bold leading-tight tracking-[-0.015em]"
+        >
+          Acceso Rápido
+        </h3>
+        <div
+          class="grid grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-3 p-4"
+        >
+          <button
+            type="button"
+            onclick="window.location.href='/form'"
+            class="flex flex-1 cursor-pointer flex-col gap-2 rounded-xl border border-sky-200 bg-white p-4 text-left transition hover:border-primary/60 hover:shadow-sm dark:border-slate-700 dark:bg-slate-900"
+          >
+            <span class="material-symbols-outlined text-2xl text-primary">
+              person_add
+            </span>
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold leading-tight">Nuevo empleado</h2>
+              <p class="text-sm text-slate-600 dark:text-slate-400">
+                Registrar ingreso en la base de datos
+              </p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onclick="window.location.href='/empleados'"
+            class="flex flex-1 cursor-pointer flex-col gap-2 rounded-xl border border-sky-200 bg-white p-4 text-left transition hover:border-primary/60 hover:shadow-sm dark:border-slate-700 dark:bg-slate-900"
+          >
+            <span class="material-symbols-outlined text-2xl text-primary">
+              manage_accounts
+            </span>
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold leading-tight">Modificaciones</h2>
+              <p class="text-sm text-slate-600 dark:text-slate-400">
+                Editar o eliminar empleados
+              </p>
+            </div>
+          </button>
+
+          <div
+            class="flex flex-1 cursor-default flex-col gap-2 rounded-xl border border-sky-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
+          >
+            <span class="material-symbols-outlined text-2xl text-primary">
+              analytics
+            </span>
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold leading-tight">Indicadores</h2>
+              <p class="text-sm text-slate-600 dark:text-slate-400">
+                Vista general de empleados registrados
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla/Export (como la tenías) -->
+        <section class="px-4 pt-4">
+          <div
+            class="flex flex-col gap-3 rounded-xl border border-sky-200 bg-white p-4 shadow-sm ring-1 ring-sky-100 dark:border-slate-700 dark:bg-slate-900 dark:ring-0"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 class="text-base font-semibold">Empleados registrados</h3>
+                <p class="text-xs text-slate-600 dark:text-slate-400">
+                  Filtra, ordena, selecciona y exporta los datos.
+                </p>
+              </div>
+
+              <div class="flex flex-wrap gap-2">
+                <button
+                  id="exportAllBtn"
+                  type="button"
+                  class="flex items-center gap-1 rounded-lg border border-sky-300 px-3 py-1.5 text-xs font-medium text-slate-800 hover:bg-sky-50 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+                >
+                  <span class="material-symbols-outlined text-sm">
+                    download
+                  </span>
+                  Exportar todo
+                </button>
+                <button
+                  id="exportFilteredBtn"
+                  type="button"
+                  class="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-dark"
+                >
+                  <span class="material-symbols-outlined text-sm">
+                    filter_alt
+                  </span>
+                  Exportar vista actual
+                </button>
+              </div>
+            </div>
+
+            <div
+              class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700"
+            >
+              <table class="min-w-full border-collapse text-left text-xs">
+                <!-- thead + filtros + tbody como ya lo tienes -->
+                <thead class="bg-slate-50 dark:bg-slate-900/60">
+                  <!-- Encabezados con orden -->
+                  <tr>
+                    <th class="w-8 px-2 py-2 align-middle">
+                      <input
+                        id="selectAllRows"
+                        type="checkbox"
+                        class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/60"
+                      />
+                    </th>
+
+                    <th class="px-2 py-2">
+                      <button
+                        type="button"
+                        data-sort-field="nombre"
+                        class="flex items-center gap-1"
+                      >
+                        <span>Nombre</span>
+                        <span
+                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                          data-icon-field="nombre"
+                          >unfold_more</span
+                        >
+                      </button>
+                    </th>
+
+                    <th class="px-2 py-2">
+                      <button
+                        type="button"
+                        data-sort-field="documento"
+                        class="flex items-center gap-1"
+                      >
+                        <span>Documento</span>
+                        <span
+                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                          data-icon-field="documento"
+                          >unfold_more</span
+                        >
+                      </button>
+                    </th>
+
+                    <th class="px-2 py-2">
+                      <button
+                        type="button"
+                        data-sort-field="edad"
+                        class="flex items-center gap-1"
+                      >
+                        <span>Edad</span>
+                        <span
+                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                          data-icon-field="edad"
+                          >unfold_more</span
+                        >
+                      </button>
+                    </th>
+
+                    <th class="px-2 py-2">
+                      <button
+                        type="button"
+                        data-sort-field="cargo"
+                        class="flex items-center gap-1"
+                      >
+                        <span>Cargo</span>
+                        <span
+                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                          data-icon-field="cargo"
+                          >unfold_more</span
+                        >
+                      </button>
+                    </th>
+
+                    <th class="px-2 py-2">
+                      <button
+                        type="button"
+                        data-sort-field="fecha_afiliacion"
+                        class="flex items-center gap-1"
+                      >
+                        <span>Fecha ingreso</span>
+                        <span
+                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                          data-icon-field="fecha_afiliacion"
+                          >unfold_more</span
+                        >
+                      </button>
+                    </th>
+
+                    <th class="px-2 py-2">
+                      <button
+                        type="button"
+                        data-sort-field="fecha_retiro"
+                        class="flex items-center gap-1"
+                      >
+                        <span>Fecha salida</span>
+                        <span
+                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                          data-icon-field="fecha_retiro"
+                          >unfold_more</span
+                        >
+                      </button>
+                    </th>
+
+                    <th class="px-2 py-2">
+                      <button
+                        type="button"
+                        data-sort-field="sexo"
+                        class="flex items-center gap-1"
+                      >
+                        <span>Sexo</span>
+                        <span
+                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                          data-icon-field="sexo"
+                          >unfold_more</span
+                        >
+                      </button>
+                    </th>
+
+                    <th class="px-2 py-2">
+                      <button
+                        type="button"
+                        data-sort-field="EPS"
+                        class="flex items-center gap-1"
+                      >
+                        <span>EPS</span>
+                        <span
+                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                          data-icon-field="EPS"
+                          >unfold_more</span
+                        >
+                      </button>
+                    </th>
+
+                    <th class="px-2 py-2">
+                      <button
+                        type="button"
+                        data-sort-field="ARL"
+                        class="flex items-center gap-1"
+                      >
+                        <span>ARL</span>
+                        <span
+                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                          data-icon-field="ARL"
+                          >unfold_more</span
+                        >
+                      </button>
+                    </th>
+                  </tr>
+
+                  <!-- Fila de filtros -->
+                  <tr class="border-t border-slate-200 dark:border-slate-700">
+                    <th class="px-2 py-1"></th>
+
+                    <th class="px-2 py-1">
+                      <input
+                        type="text"
+                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                        placeholder="Filtrar nombre"
+                        data-field="nombre"
+                      />
+                    </th>
+
+                    <th class="px-2 py-1">
+                      <input
+                        type="text"
+                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                        placeholder="Documento"
+                        data-field="documento"
+                      />
+                    </th>
+
+                    <th class="px-2 py-1">
+                      <input
+                        type="text"
+                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                        placeholder="Edad"
+                        data-field="edad"
+                      />
+                    </th>
+
+                    <th class="px-2 py-1">
+                      <input
+                        type="text"
+                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                        placeholder="Cargo"
+                        data-field="cargo"
+                      />
+                    </th>
+
+                    <th class="px-2 py-1">
+                      <input
+                        type="text"
+                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                        placeholder="AAAA-MM-DD"
+                        data-field="fecha_afiliacion"
+                      />
+                    </th>
+
+                    <th class="px-2 py-1">
+                      <input
+                        type="text"
+                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                        placeholder="AAAA-MM-DD"
+                        data-field="fecha_retiro"
+                      />
+                    </th>
+
+                    <th class="px-2 py-1">
+                      <input
+                        type="text"
+                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                        placeholder="Sexo"
+                        data-field="sexo"
+                      />
+                    </th>
+
+                    <th class="px-2 py-1">
+                      <input
+                        type="text"
+                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                        placeholder="EPS"
+                        data-field="EPS"
+                      />
+                    </th>
+
+                    <th class="px-2 py-1">
+                      <input
+                        type="text"
+                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                        placeholder="ARL"
+                        data-field="ARL"
+                      />
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody
+                  id="employeesTableBody"
+                  class="divide-y divide-slate-100 dark:divide-slate-800"
+                >
+                  <!-- filas generadas por dashboard.js -->
+                </tbody>
+              </table>
+            </div>
+
+            <p
+              id="tableSummary"
+              class="pt-1 text-[11px] text-slate-600 dark:text-slate-400"
+            >
+              Cargando datos...
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <!-- Bottom Navigation -->
+      <nav
+        class="fixed bottom-0 left-0 right-0 z-10 border-t border-sky-200 bg-background-light/80 backdrop-blur-sm dark:border-slate-700 dark:bg-background-dark/80"
+      >
+        <div
+          class="mx-auto flex h-16 max-w-md items-center justify-around px-4 text-[11px]"
+        >
+          <a
+            class="flex flex-col items-center gap-0.5 text-primary"
+            href="/dashboard"
+          >
+            <span class="material-symbols-outlined text-[20px]">
+              dashboard
+            </span>
+            <span class="font-medium">Panel</span>
+          </a>
+          <a
+            class="flex flex-col items-center gap-0.5 text-slate-600 dark:text-slate-400"
+            href="/form"
+          >
+            <span class="material-symbols-outlined text-[20px]">
+              person_add
+            </span>
+            <span class="font-medium">Formulario</span>
+          </a>
+          <a
+            class="flex flex-col items-center gap-0.5 text-slate-600 dark:text-slate-400"
+            href="/empleados"
+          >
+            <span class="material-symbols-outlined text-[20px]">
+              manage_accounts
+            </span>
+            <span class="font-medium">Gestión</span>
+          </a>
+        </div>
+      </nav>
+    </div>
+
+    <!-- Tu lógica principal -->
+    <script src="/dashboard.js"></script>
+
+    <!-- JS ligero para navegación y modal de logout -->
+    <script>
+      (function () {
+        const goToEmployeesBtn = document.getElementById("goToEmployeesBtn");
+        const goToFormBtn = document.getElementById("goToFormBtn");
+        const logoutBtn = document.getElementById("logoutBtn");
+
+        const logoutModal = document.getElementById("logoutConfirmModal");
+        const logoutCancelBtn = document.getElementById("logoutCancelBtn");
+        const logoutConfirmBtn = document.getElementById("logoutConfirmBtn");
+
+        if (goToEmployeesBtn)
+          goToEmployeesBtn.addEventListener(
+            "click",
+            () => (window.location.href = "/empleados")
+          );
+        if (goToFormBtn)
+          goToFormBtn.addEventListener(
+            "click",
+            () => (window.location.href = "/form")
+          );
+
+        function openLogoutModal() {
+          logoutModal.classList.remove("hidden");
+          logoutModal.classList.add("flex");
+        }
+        function closeLogoutModal() {
+          logoutModal.classList.add("hidden");
+          logoutModal.classList.remove("flex");
+        }
+
+        if (logoutBtn) logoutBtn.addEventListener("click", openLogoutModal);
+        if (logoutCancelBtn)
+          logoutCancelBtn.addEventListener("click", closeLogoutModal);
+        if (logoutConfirmBtn) {
+          logoutConfirmBtn.addEventListener("click", () => {
+            try {
+              localStorage.removeItem("usuarioRRHH");
+            } catch {}
+            window.location.href = "/";
+          });
+        }
+
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") closeLogoutModal();
+        });
+      })();
+    </script>
+  </body>
+</html>

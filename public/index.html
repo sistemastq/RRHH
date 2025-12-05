@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html class="light" lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Portal RRHH - Inicio de Sesión</title>
+
+    <!-- Tailwind + config -->
+    <script id="tailwind-config">
+      tailwind = {
+        config: {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                primary: "#0ea5e9",          /* azul celeste principal */
+                "primary-dark": "#0284c7",   /* azul un poco más intenso */
+                "background-light": "#e0f2fe", /* celeste muy claro de fondo */
+                "background-dark": "#020617",
+              },
+              fontFamily: {
+                display: ["Manrope", "sans-serif"],
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <!-- Fuentes -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Estilos propios -->
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+
+  <body
+    class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-50"
+  >
+    <!-- Modal de carga -->
+    <div
+      id="loginLoadingModal"
+      class="fixed inset-0 z-40 hidden items-center justify-center bg-black/40 backdrop-blur-sm"
+    >
+      <div
+        class="flex max-w-sm flex-col items-center gap-4 rounded-2xl bg-white px-8 py-6 shadow-2xl dark:bg-slate-900"
+      >
+        <div
+          class="h-12 w-12 animate-spin rounded-full border-[3px] border-primary border-t-transparent"
+        ></div>
+        <div class="space-y-1 text-center">
+          <p class="text-base font-semibold text-slate-900 dark:text-slate-50">
+            Validando tus credenciales...
+          </p>
+          <p class="text-sm text-slate-500 dark:text-slate-300">
+            Esto puede tardar unos segundos. No cierres la ventana.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Layout principal -->
+    <div
+      class="flex min-h-screen w-full items-center justify-center px-4 py-8"
+    >
+      <div
+        class="w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-sky-100 dark:bg-slate-900 dark:ring-slate-700"
+      >
+        <div class="flex flex-col md:flex-row">
+          <!-- Lado izquierdo: branding / texto -->
+          <div
+            class="flex flex-1 flex-col justify-between bg-gradient-to-br from-sky-500 via-sky-400 to-sky-600 px-6 py-6 text-white md:px-8 md:py-10"
+          >
+            <div class="space-y-3 md:space-y-4">
+              <div
+                class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 md:h-16 md:w-16"
+              >
+                <span class="material-symbols-outlined text-3xl md:text-4xl">
+                  diversity_3
+                </span>
+              </div>
+              <div>
+                <h1 class="text-2xl font-bold md:text-3xl">
+                  Portal de Gestión RRHH
+                </h1>
+                <p class="mt-2 text-sm md:text-base text-sky-50/90">
+                  Centraliza la información de tus empleados, controla
+                  contrataciones, retiros y reportes desde un solo lugar.
+                </p>
+              </div>
+            </div>
+
+            <div class="mt-6 space-y-2 text-xs md:mt-10 md:text-sm">
+              <p class="font-medium text-sky-50/90">
+                Acceso exclusivo para el área de Talento Humano.
+              </p>
+              <p class="text-sky-50/80">
+                Si no reconoces esta pantalla o sospechas de un uso indebido de
+                tus credenciales, contacta inmediatamente con el equipo de
+                sistemas.
+              </p>
+            </div>
+          </div>
+
+          <!-- Lado derecho: formulario -->
+          <div
+            class="flex flex-1 items-center justify-center bg-slate-50 px-5 py-6 dark:bg-slate-950 md:px-8 md:py-10"
+          >
+            <div class="w-full max-w-md">
+              <!-- Títulos -->
+              <h2
+                class="mb-2 text-xl font-semibold text-slate-900 dark:text-slate-50 md:text-2xl"
+              >
+                Inicia sesión
+              </h2>
+              <p class="mb-6 text-sm text-slate-500 dark:text-slate-400">
+                Usa tu correo corporativo y contraseña asignada por RRHH para
+                acceder al panel.
+              </p>
+
+              <!-- Mensaje de error -->
+              <div
+                id="loginAlert"
+                class="mb-4 hidden rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-700/40 dark:bg-red-900/30 dark:text-red-200"
+              ></div>
+
+              <!-- Formulario -->
+              <form id="loginForm" class="space-y-5" novalidate>
+                <div class="space-y-1.5">
+                  <label
+                    for="email"
+                    class="block text-sm font-medium text-slate-800 dark:text-slate-200"
+                  >
+                    Correo corporativo
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autocomplete="email"
+                    required
+                    class="form-input block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm md:text-base text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:placeholder:text-slate-500"
+                    placeholder="nombre.apellido@empresa.com"
+                  />
+                </div>
+
+                <div class="space-y-1.5">
+                  <label
+                    for="password"
+                    class="block text-sm font-medium text-slate-800 dark:text-slate-200"
+                  >
+                    Contraseña
+                  </label>
+                  <div class="relative">
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      autocomplete="current-password"
+                      required
+                      class="form-input block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 pr-11 text-sm md:text-base text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:placeholder:text-slate-500"
+                      placeholder="Ingresa tu contraseña"
+                    />
+                    <button
+                      type="button"
+                      id="togglePassword"
+                      class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-primary-dark dark:text-slate-500"
+                    >
+                      <span class="material-symbols-outlined text-2xl">
+                        visibility_off
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs md:text-sm">
+                  <span class="text-slate-500 dark:text-slate-400">
+                    Acceso interno solo para RRHH.
+                  </span>
+                  <a
+                    href="mailto:rrhh@empresa.com?subject=Problema%20de%20acceso%20Portal%20RRHH"
+                    class="font-medium text-primary hover:text-primary-dark hover:underline"
+                  >
+                    ¿Problemas para ingresar?
+                  </a>
+                </div>
+
+                <!-- Botón -->
+                <button
+                  id="loginButton"
+                  type="submit"
+                  class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-black shadow-md transition hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-dark focus:ring-offset-2 focus:ring-offset-slate-100 dark:bg-sky-500 dark:hover:bg-sky-400 dark:focus:ring-sky-400 dark:focus:ring-offset-slate-900 md:text-base"
+                >
+                  <span class="material-symbols-outlined text-lg md:text-xl">
+                    login
+                  </span>
+                  <span>Iniciar sesión</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/login.js"></script>
+  </body>
+</html>
