@@ -1,5 +1,4 @@
 // public/employees.js
-
 document.addEventListener("DOMContentLoaded", () => {
   const tbody = document.getElementById("employeesTableBody");
   const summary = document.getElementById("employeesSummary");
@@ -59,6 +58,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const deleteCancelBtn = document.getElementById("deleteCancelBtn");
   const deleteConfirmBtn = document.getElementById("deleteConfirmBtn");
 
+  // ====== Ajustes para que el submit SIEMPRE dispare (CSP + required) ======
+  // Evitamos que HTML5 pare el submit si hay 'required' en info_adicional
+  try {
+    editForm?.setAttribute("novalidate", "true");
+    editInfoAdicional?.removeAttribute("required");
+  } catch {}
+
   let empleados = [];
   let filtered = [];
   let empleadoToDelete = null;
@@ -73,6 +79,78 @@ document.addEventListener("DOMContentLoaded", () => {
       loadingModal.classList.add("hidden");
       loadingModal.classList.remove("flex");
     }
+  }
+
+  // ====== Modal de resultado (éxito / info) creado por JS ======
+  function ensureResultModal() {
+    let modal = document.getElementById("resultModalGeneric");
+    if (modal) return modal;
+
+    modal = document.createElement("div");
+    modal.id = "resultModalGeneric";
+    modal.className =
+      "fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm";
+    modal.innerHTML = `
+      <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900">
+        <div class="flex items-start gap-3">
+          <div id="resIconWrap" class="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
+            <span id="resIcon" class="material-symbols-outlined text-2xl">check_circle</span>
+          </div>
+          <div class="flex-1">
+            <h2 id="resTitle" class="text-sm font-semibold text-slate-900 dark:text-slate-100">Listo</h2>
+            <p id="resMsg" class="mt-2 text-xs text-slate-700 dark:text-slate-300">Operación completada.</p>
+            <div class="mt-4 flex justify-end">
+              <button id="resCloseBtn" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const close = () => {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    };
+    modal.querySelector("#resCloseBtn").addEventListener("click", close);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !modal.classList.contains("hidden")) close();
+    });
+
+    return modal;
+  }
+
+  function openResultModal({ type = "success", title, message }) {
+    const modal = ensureResultModal();
+    const wrap = modal.querySelector("#resIconWrap");
+    const icon = modal.querySelector("#resIcon");
+    const t = modal.querySelector("#resTitle");
+    const m = modal.querySelector("#resMsg");
+
+    // reset
+    wrap.className =
+      "flex h-10 w-10 items-center justify-center rounded-full";
+    if (type === "success") {
+      wrap.classList.add(
+        "bg-emerald-100",
+        "text-emerald-600",
+        "dark:bg-emerald-900/40",
+        "dark:text-emerald-300"
+      );
+      icon.textContent = "check_circle";
+    } else {
+      wrap.classList.add(
+        "bg-sky-100",
+        "text-sky-700",
+        "dark:bg-sky-900/40",
+        "dark:text-sky-300"
+      );
+      icon.textContent = "info";
+    }
+
+    t.textContent = title || "Operación exitosa";
+    m.textContent = message || "Cambios guardados correctamente.";
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
   }
 
   // Botón para devolverse
@@ -107,9 +185,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!viewModal) return;
 
     viewNombre.textContent = emp.nombre || "—";
-    viewDocumento.textContent = `${emp.tipo_documento || "—"} ${
-      emp.documento || ""
-    }`.trim();
+    viewDocumento.textContent = `${emp.tipo_documento || "—"} ${emp.documento || ""}`.trim();
     viewCargo.textContent = emp.cargo || "—";
 
     const fi = emp.fecha_afiliacion || "—";
@@ -152,7 +228,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (viewModalClose) viewModalClose.addEventListener("click", closeViewModal);
   if (viewCloseBtn) viewCloseBtn.addEventListener("click", closeViewModal);
-  // Cerrar view con ESC
+  // Cerrar con ESC (incluye otros modales)
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeViewModal();
@@ -238,10 +314,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setLoading(true, "Eliminando empleado...");
 
       try {
-        const res = await fetch(`/api/formularios/${id}`, {
-          method: "DELETE",
-        });
-
+        const res = await fetch(`/api/formularios/${id}`, { method: "DELETE" });
         if (!res.ok) {
           console.error("Error al eliminar", await res.text());
           alert("No se pudo eliminar el empleado. Intenta nuevamente.");
@@ -282,18 +355,12 @@ document.addEventListener("DOMContentLoaded", () => {
       .map((e) => {
         return `
       <tr class="bg-white text-[11px] hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800">
-        <td class="max-w-[180px] truncate px-2 py-1">${escapeHtml(
-          e.nombre || ""
-        )}</td>
+        <td class="max-w-[180px] truncate px-2 py-1">${escapeHtml(e.nombre || "")}</td>
         <td class="px-2 py-1">${escapeHtml(e.documento || "")}</td>
-        <td class="max-w-[140px] truncate px-2 py-1">${escapeHtml(
-          e.cargo || ""
-        )}</td>
+        <td class="max-w-[140px] truncate px-2 py-1">${escapeHtml(e.cargo || "")}</td>
         <td class="px-2 py-1">${escapeHtml(e.fecha_afiliacion || "")}</td>
         <td class="px-2 py-1">${escapeHtml(e.fecha_retiro || "")}</td>
-        <td class="max-w-[160px] truncate px-2 py-1">${escapeHtml(
-          e.correo || ""
-        )}</td>
+        <td class="max-w-[160px] truncate px-2 py-1">${escapeHtml(e.correo || "")}</td>
         <td class="px-2 py-1">${escapeHtml(e.telefono ?? "")}</td>
         <td class="px-2 py-1 text-right whitespace-nowrap">
           <button
@@ -335,23 +402,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const id = Number(btn.dataset.id);
         setLoading(true, "Consultando información del empleado...");
         try {
-          // Consultar detalle desde la API (para que sienta que sí "consulta")
           const res = await fetch(`/api/formularios/${id}`);
           const emp = await res.json();
           if (!res.ok) {
             console.error("Error consultando empleado:", emp);
-            alert(
-              emp?.error ||
-                "No se pudo consultar el empleado. Intenta de nuevo."
-            );
+            alert(emp?.error || "No se pudo consultar el empleado. Intenta de nuevo.");
             return;
           }
           openViewModal(emp);
         } catch (err) {
           console.error(err);
-          alert(
-            "Error de conexión al consultar el empleado. Revisa la red o el servidor."
-          );
+          alert("Error de conexión al consultar el empleado. Revisa la red o el servidor.");
         } finally {
           setLoading(false);
         }
@@ -383,13 +444,7 @@ document.addEventListener("DOMContentLoaded", () => {
       filtered = [...empleados];
     } else {
       filtered = empleados.filter((e) => {
-        const campos = [
-          e.nombre,
-          e.documento,
-          e.cargo,
-          e.correo,
-          e.telefono,
-        ]
+        const campos = [e.nombre, e.documento, e.cargo, e.correo, e.telefono]
           .map((v) => (v == null ? "" : String(v).toLowerCase()))
           .join(" ");
         return campos.includes(term);
@@ -422,15 +477,14 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (err) {
       console.error(err);
       if (summary) {
-        summary.textContent =
-          "Error al cargar empleados. Verifica la conexión o el servidor.";
+        summary.textContent = "Error al cargar empleados. Verifica la conexión o el servidor.";
       }
     } finally {
       setLoading(false);
     }
   }
 
-  // Guardar edición
+  // ====== Guardar edición ======
   if (editForm) {
     editForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -459,8 +513,12 @@ document.addEventListener("DOMContentLoaded", () => {
         ARL: editARL.value.trim(),
         fondo_pension: editFondoPension.value.trim(),
         caja_compensacion: editCajaCompensacion.value.trim(),
-        info_adicional: editInfoAdicional.value.trim(),
+        // IMPORTANTE: info_adicional ya NO es obligatoria
+        info_adicional: (editInfoAdicional.value || "").trim() || null,
       };
+
+      // Regla de activo/inactivo según fecha de salida
+      payload.activo = payload.fecha_retiro ? 0 : 1;
 
       const obligatorios = [
         "nombre",
@@ -472,7 +530,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "fecha_afiliacion",
         "salario",
         "telefono",
-        "info_adicional",
+        // "info_adicional" -> YA NO
       ];
 
       const faltan = obligatorios.filter(
@@ -488,6 +546,8 @@ document.addEventListener("DOMContentLoaded", () => {
       editSaveBtn.disabled = true;
       setLoading(true, "Guardando cambios del empleado...");
 
+      const pasoAInactivo = !!payload.fecha_retiro;
+
       try {
         const res = await fetch(`/api/formularios/${id}`, {
           method: "PUT",
@@ -500,20 +560,36 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!res.ok) {
           console.error("Error actualizando empleado:", data);
           showEditAlert(
-            data?.error ||
-              "No se pudo actualizar el empleado. Intenta nuevamente."
+            data?.error || "No se pudo actualizar el empleado. Intenta nuevamente."
           );
           return;
         }
 
-        // Actualizar en memoria
+        // Actualizar en memoria (soporta {data: {...}} o el objeto directo)
+        const updated = (data && (data.data || data)) || {};
         const idx = empleados.findIndex((e) => e.id === Number(id));
         if (idx !== -1) {
-          empleados[idx] = { ...empleados[idx], ...data.data };
+          empleados[idx] = { ...empleados[idx], ...updated };
         }
 
         aplicarFiltro();
         closeEditModal();
+
+        // Modal de confirmación de éxito
+        if (pasoAInactivo) {
+          openResultModal({
+            type: "success",
+            title: "Cambios guardados",
+            message:
+              "El empleado quedó INACTIVO porque se estableció una fecha de salida.",
+          });
+        } else {
+          openResultModal({
+            type: "success",
+            title: "Cambios guardados",
+            message: "El registro del empleado se actualizó correctamente.",
+          });
+        }
       } catch (err) {
         console.error(err);
         showEditAlert(
