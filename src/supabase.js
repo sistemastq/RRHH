@@ -1,20 +1,16 @@
-// supabase.js
-require('dotenv').config();
 // src/supabase.js
 const { createClient } = require('@supabase/supabase-js');
-module.exports = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE);
 
+const url =
+  process.env.SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+const key =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||   // 👈 tu .env usa este
+  process.env.SUPABASE_SERVICE_ROLE ||       // fallback
+  process.env.SUPABASE_ANON_KEY;             // último recurso
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error(
-    '⚠️ Falta SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY/ANON_KEY en el .env'
-  );
-}
+if (!url) throw new Error('SUPABASE_URL is required.');
+if (!key) throw new Error('SUPABASE_SERVICE_ROLE(_KEY) is required.');
 
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-module.exports = supabase;
+module.exports = createClient(url, key);
