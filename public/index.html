@@ -6,26 +6,8 @@
     <title>Portal RRHH - Inicio de Sesión</title>
 
     <!-- Tailwind + config -->
-    <script id="tailwind-config">
-      tailwind = {
-        config: {
-          darkMode: "class",
-          theme: {
-            extend: {
-              colors: {
-                primary: "#0ea5e9",          /* azul celeste principal */
-                "primary-dark": "#0284c7",   /* azul un poco más intenso */
-                "background-light": "#e0f2fe", /* celeste muy claro de fondo */
-                "background-dark": "#020617",
-              },
-              fontFamily: {
-                display: ["Manrope", "sans-serif"],
-              },
-            },
-          },
-        },
-      };
-    </script>
+    <!-- Tailwind + config (externo, CSP-safe) -->
+    <script src="/tw-config.js"></script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 
     <!-- Fuentes -->
@@ -68,9 +50,7 @@
     </div>
 
     <!-- Layout principal -->
-    <div
-      class="flex min-h-screen w-full items-center justify-center px-4 py-8"
-    >
+    <div class="flex min-h-screen w-full items-center justify-center px-4 py-8">
       <div
         class="w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-sky-100 dark:bg-slate-900 dark:ring-slate-700"
       >
@@ -181,7 +161,9 @@
                   </div>
                 </div>
 
-                <div class="flex items-center justify-between text-xs md:text-sm">
+                <div
+                  class="flex items-center justify-between text-xs md:text-sm"
+                >
                   <span class="text-slate-500 dark:text-slate-400">
                     Acceso interno solo para RRHH.
                   </span>

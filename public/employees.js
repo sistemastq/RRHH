@@ -58,17 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const deleteCancelBtn = document.getElementById("deleteCancelBtn");
   const deleteConfirmBtn = document.getElementById("deleteConfirmBtn");
 
-  // ====== Ajustes para que el submit SIEMPRE dispare (CSP + required) ======
-  // Evitamos que HTML5 pare el submit si hay 'required' en info_adicional
-  try {
-    editForm?.setAttribute("novalidate", "true");
-    editInfoAdicional?.removeAttribute("required");
-  } catch {}
-
-  let empleados = [];
-  let filtered = [];
-  let empleadoToDelete = null;
-
+  // ===== Helpers =====
   function setLoading(show, message) {
     if (!loadingModal) return;
     if (loadingText && message) loadingText.textContent = message;
@@ -81,7 +71,32 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ====== Modal de resultado (éxito / info) creado por JS ======
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function nullIfEmpty(v) {
+    const s = (v ?? "").toString().trim();
+    return s === "" ? null : s;
+  }
+  function numberOrNull(v) {
+    const s = (v ?? "").toString().trim();
+    if (s === "") return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function apiTieneCampoActivo(id) {
+    const emp = empleados.find((e) => e.id === Number(id));
+    return emp && Object.prototype.hasOwnProperty.call(emp, "activo");
+  }
+
+  // Modal de resultado (éxito/error) inyectable si no existe en la página
   function ensureResultModal() {
     let modal = document.getElementById("resultModalGeneric");
     if (modal) return modal;
@@ -89,47 +104,50 @@ document.addEventListener("DOMContentLoaded", () => {
     modal = document.createElement("div");
     modal.id = "resultModalGeneric";
     modal.className =
-      "fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm";
+      "fixed inset-0 z-40 hidden items-center justify-center bg-black/40 backdrop-blur-sm";
     modal.innerHTML = `
       <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900">
         <div class="flex items-start gap-3">
-          <div id="resIconWrap" class="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
-            <span id="resIcon" class="material-symbols-outlined text-2xl">check_circle</span>
+          <div id="rmIconWrap" class="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
+            <span id="rmIcon" class="material-symbols-outlined text-2xl">check_circle</span>
           </div>
           <div class="flex-1">
-            <h2 id="resTitle" class="text-sm font-semibold text-slate-900 dark:text-slate-100">Listo</h2>
-            <p id="resMsg" class="mt-2 text-xs text-slate-700 dark:text-slate-300">Operación completada.</p>
+            <h2 id="rmTitle" class="text-sm font-semibold text-slate-900 dark:text-slate-100">Listo</h2>
+            <p id="rmMsg" class="mt-2 text-sm text-slate-700 dark:text-slate-300">Operación realizada.</p>
             <div class="mt-4 flex justify-end">
-              <button id="resCloseBtn" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">Cerrar</button>
+              <button id="rmClose" type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">Cerrar</button>
             </div>
           </div>
         </div>
-      </div>`;
+      </div>
+    `;
     document.body.appendChild(modal);
-
-    const close = () => {
+    modal.querySelector("#rmClose").addEventListener("click", () => {
       modal.classList.add("hidden");
       modal.classList.remove("flex");
-    };
-    modal.querySelector("#resCloseBtn").addEventListener("click", close);
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !modal.classList.contains("hidden")) close();
     });
-
     return modal;
   }
 
-  function openResultModal({ type = "success", title, message }) {
+  function openResultModal({ type = "success", title = "Listo", message = "" }) {
     const modal = ensureResultModal();
-    const wrap = modal.querySelector("#resIconWrap");
-    const icon = modal.querySelector("#resIcon");
-    const t = modal.querySelector("#resTitle");
-    const m = modal.querySelector("#resMsg");
+    const wrap = modal.querySelector("#rmIconWrap");
+    const icon = modal.querySelector("#rmIcon");
+    const t = modal.querySelector("#rmTitle");
+    const m = modal.querySelector("#rmMsg");
 
-    // reset
+    // reset estilos
     wrap.className =
       "flex h-10 w-10 items-center justify-center rounded-full";
-    if (type === "success") {
+    if (type === "error") {
+      wrap.classList.add(
+        "bg-red-100",
+        "text-red-600",
+        "dark:bg-red-900/40",
+        "dark:text-red-300"
+      );
+      icon.textContent = "error";
+    } else {
       wrap.classList.add(
         "bg-emerald-100",
         "text-emerald-600",
@@ -137,23 +155,15 @@ document.addEventListener("DOMContentLoaded", () => {
         "dark:text-emerald-300"
       );
       icon.textContent = "check_circle";
-    } else {
-      wrap.classList.add(
-        "bg-sky-100",
-        "text-sky-700",
-        "dark:bg-sky-900/40",
-        "dark:text-sky-300"
-      );
-      icon.textContent = "info";
     }
+    t.textContent = title;
+    m.textContent = message || (type === "error" ? "Se produjo un error." : "Operación realizada con éxito.");
 
-    t.textContent = title || "Operación exitosa";
-    m.textContent = message || "Cambios guardados correctamente.";
     modal.classList.remove("hidden");
     modal.classList.add("flex");
   }
 
-  // Botón para devolverse
+  // ===== Navegación básica =====
   if (backBtn) {
     backBtn.addEventListener("click", () => {
       if (window.history.length > 1) {
@@ -163,14 +173,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-
-  // Navegación
   if (goDashboardBtn) {
     goDashboardBtn.addEventListener("click", () => {
       window.location.href = "/dashboard";
     });
   }
-
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
       try {
@@ -180,14 +187,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ---- VIEW MODAL ----
+  // ===== View modal =====
   function openViewModal(emp) {
     if (!viewModal) return;
 
     viewNombre.textContent = emp.nombre || "—";
     viewDocumento.textContent = `${emp.tipo_documento || "—"} ${emp.documento || ""}`.trim();
     viewCargo.textContent = emp.cargo || "—";
-
     const fi = emp.fecha_afiliacion || "—";
     const fr = emp.fecha_retiro || "Activo";
     viewFechas.textContent = `${fi} → ${fr}`;
@@ -219,25 +225,15 @@ document.addEventListener("DOMContentLoaded", () => {
     viewModal.classList.remove("hidden");
     viewModal.classList.add("flex");
   }
-
   function closeViewModal() {
     if (!viewModal) return;
     viewModal.classList.add("hidden");
     viewModal.classList.remove("flex");
   }
-
   if (viewModalClose) viewModalClose.addEventListener("click", closeViewModal);
   if (viewCloseBtn) viewCloseBtn.addEventListener("click", closeViewModal);
-  // Cerrar con ESC (incluye otros modales)
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeViewModal();
-      closeEditModal();
-      closeDeleteModal();
-    }
-  });
 
-  // ---- EDIT MODAL ----
+  // ===== Edit modal =====
   function openEditModal(emp) {
     if (!editModal) return;
     clearEditAlert();
@@ -264,29 +260,26 @@ document.addEventListener("DOMContentLoaded", () => {
     editModal.classList.remove("hidden");
     editModal.classList.add("flex");
   }
-
   function closeEditModal() {
     if (!editModal) return;
     editModal.classList.add("hidden");
     editModal.classList.remove("flex");
   }
-
   function showEditAlert(message) {
     if (!editModalAlert) return;
     editModalAlert.textContent = message;
     editModalAlert.classList.remove("hidden");
   }
-
   function clearEditAlert() {
     if (!editModalAlert) return;
     editModalAlert.textContent = "";
     editModalAlert.classList.add("hidden");
   }
-
   if (editModalClose) editModalClose.addEventListener("click", closeEditModal);
   if (editCancelBtn) editCancelBtn.addEventListener("click", closeEditModal);
 
-  // ---- DELETE MODAL ----
+  // ===== Delete modal =====
+  let empleadoToDelete = null;
   function openDeleteModal(emp) {
     empleadoToDelete = emp;
     if (!deleteModal) return;
@@ -296,16 +289,13 @@ document.addEventListener("DOMContentLoaded", () => {
     deleteModal.classList.remove("hidden");
     deleteModal.classList.add("flex");
   }
-
   function closeDeleteModal() {
     empleadoToDelete = null;
     if (!deleteModal) return;
     deleteModal.classList.add("hidden");
     deleteModal.classList.remove("flex");
   }
-
   if (deleteCancelBtn) deleteCancelBtn.addEventListener("click", closeDeleteModal);
-
   if (deleteConfirmBtn) {
     deleteConfirmBtn.addEventListener("click", async () => {
       if (!empleadoToDelete) return;
@@ -316,15 +306,17 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const res = await fetch(`/api/formularios/${id}`, { method: "DELETE" });
         if (!res.ok) {
-          console.error("Error al eliminar", await res.text());
-          alert("No se pudo eliminar el empleado. Intenta nuevamente.");
+          const txt = await res.text();
+          console.error("Error al eliminar", txt);
+          openResultModal({ type: "error", title: "No se pudo eliminar", message: txt || "Intenta nuevamente." });
         } else {
           empleados = empleados.filter((e) => e.id !== id);
           aplicarFiltro();
+          openResultModal({ type: "success", title: "Eliminado", message: "El registro fue eliminado correctamente." });
         }
       } catch (err) {
         console.error(err);
-        alert("Error de conexión al eliminar empleado.");
+        openResultModal({ type: "error", title: "Error de conexión", message: "No se pudo contactar el servidor." });
       } finally {
         deleteConfirmBtn.disabled = false;
         closeDeleteModal();
@@ -333,15 +325,23 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ---- TABLA ----
-  function escapeHtml(value) {
-    return String(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
+  // Cerrar modales con ESC
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeViewModal();
+      closeEditModal();
+      closeDeleteModal();
+      const rm = document.getElementById("resultModalGeneric");
+      if (rm && !rm.classList.contains("hidden")) {
+        rm.classList.add("hidden");
+        rm.classList.remove("flex");
+      }
+    }
+  });
+
+  // ===== Tabla =====
+  let empleados = [];
+  let filtered = [];
 
   function renderTabla() {
     if (!tbody) return;
@@ -403,16 +403,26 @@ document.addEventListener("DOMContentLoaded", () => {
         setLoading(true, "Consultando información del empleado...");
         try {
           const res = await fetch(`/api/formularios/${id}`);
-          const emp = await res.json();
+          const txt = await res.text();
+          let emp = null;
+          try { emp = txt ? JSON.parse(txt) : null; } catch { emp = null; }
           if (!res.ok) {
-            console.error("Error consultando empleado:", emp);
-            alert(emp?.error || "No se pudo consultar el empleado. Intenta de nuevo.");
+            console.error("Error consultando empleado:", emp || txt);
+            openResultModal({
+              type: "error",
+              title: "No se pudo consultar",
+              message: (emp && (emp.error || emp.message)) || txt || "Intenta de nuevo.",
+            });
             return;
           }
           openViewModal(emp);
         } catch (err) {
           console.error(err);
-          alert("Error de conexión al consultar el empleado. Revisa la red o el servidor.");
+          openResultModal({
+            type: "error",
+            title: "Error de conexión",
+            message: "No se pudo contactar el servidor.",
+          });
         } finally {
           setLoading(false);
         }
@@ -457,22 +467,17 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTabla();
   }
 
-  if (searchInput) {
-    searchInput.addEventListener("input", aplicarFiltro);
-  }
-
-  if (reloadBtn) {
-    reloadBtn.addEventListener("click", () => {
-      loadEmpleados(true);
-    });
-  }
+  if (searchInput) searchInput.addEventListener("input", aplicarFiltro);
+  if (reloadBtn) reloadBtn.addEventListener("click", () => loadEmpleados(true));
 
   async function loadEmpleados(forceText) {
     setLoading(true, forceText ? "Recargando empleados..." : "Cargando empleados...");
     try {
       const res = await fetch("/api/formularios");
-      const data = (await res.json()) || [];
-      empleados = data;
+      const txt = await res.text();
+      let data = [];
+      try { data = txt ? JSON.parse(txt) : []; } catch { data = []; }
+      empleados = Array.isArray(data) ? data : [];
       aplicarFiltro();
     } catch (err) {
       console.error(err);
@@ -484,7 +489,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ====== Guardar edición ======
+  // ===== Guardar edición (PUT) =====
   if (editForm) {
     editForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -496,30 +501,37 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      // Estado previo para detectar transición activo/inactivo
+      const prev = empleados.find((e) => e.id === Number(id));
+      const prevTeniaRetiro = !!(prev && prev.fecha_retiro);
+
       const payload = {
-        nombre: editNombre.value.trim(),
-        tipo_documento: editTipoDocumento.value,
-        documento: editDocumento.value.trim(),
-        sexo: editSexo.value,
-        fecha_nacimiento: editFechaNacimiento.value,
-        cargo: editCargo.value.trim(),
-        fecha_afiliacion: editFechaAfiliacion.value,
-        fecha_retiro: editFechaRetiro.value || null,
-        salario: editSalario.value.trim(),
-        telefono: editTelefono.value.trim(),
-        correo: editCorreo.value.trim(),
-        direccion_residencia: editDireccion.value.trim(),
-        EPS: editEPS.value.trim(),
-        ARL: editARL.value.trim(),
-        fondo_pension: editFondoPension.value.trim(),
-        caja_compensacion: editCajaCompensacion.value.trim(),
-        // IMPORTANTE: info_adicional ya NO es obligatoria
-        info_adicional: (editInfoAdicional.value || "").trim() || null,
+        nombre: nullIfEmpty(editNombre.value),
+        tipo_documento: nullIfEmpty(editTipoDocumento.value),
+        documento: nullIfEmpty(editDocumento.value),
+        sexo: nullIfEmpty(editSexo.value),
+        fecha_nacimiento: nullIfEmpty(editFechaNacimiento.value),
+        cargo: nullIfEmpty(editCargo.value),
+        fecha_afiliacion: nullIfEmpty(editFechaAfiliacion.value),
+        fecha_retiro: nullIfEmpty(editFechaRetiro.value), // null o 'YYYY-MM-DD'
+        salario: numberOrNull(editSalario.value),
+        telefono: nullIfEmpty(editTelefono.value),
+        correo: nullIfEmpty(editCorreo.value),
+        direccion_residencia: nullIfEmpty(editDireccion.value),
+        EPS: nullIfEmpty(editEPS.value),
+        ARL: nullIfEmpty(editARL.value),
+        fondo_pension: nullIfEmpty(editFondoPension.value),
+        caja_compensacion: nullIfEmpty(editCajaCompensacion.value),
+        // OPCIONAL: info_adicional ya NO es obligatoria
+        info_adicional: nullIfEmpty(editInfoAdicional.value),
       };
 
-      // Regla de activo/inactivo según fecha de salida
-      payload.activo = payload.fecha_retiro ? 0 : 1;
+      // Si la API maneja 'activo', lo enviamos acorde a fecha_retiro
+      if (apiTieneCampoActivo(id)) {
+        payload.activo = payload.fecha_retiro ? 0 : 1;
+      }
 
+      // Validación mínima front (sin info_adicional)
       const obligatorios = [
         "nombre",
         "tipo_documento",
@@ -530,23 +542,27 @@ document.addEventListener("DOMContentLoaded", () => {
         "fecha_afiliacion",
         "salario",
         "telefono",
-        // "info_adicional" -> YA NO
       ];
-
       const faltan = obligatorios.filter(
-        (campo) => !payload[campo] || String(payload[campo]).trim() === ""
+        (campo) => payload[campo] === null || payload[campo] === undefined
       );
       if (faltan.length > 0) {
-        showEditAlert(
-          "Revisa los campos obligatorios marcados con *. No pueden estar vacíos."
-        );
+        showEditAlert("Revisa los campos obligatorios marcados con *. No pueden estar vacíos.");
         return;
+      }
+
+      // Regla típica: retiro >= afiliación
+      if (payload.fecha_retiro && payload.fecha_afiliacion) {
+        const fi = new Date(payload.fecha_afiliacion);
+        const fr = new Date(payload.fecha_retiro);
+        if (fr < fi) {
+          showEditAlert("La fecha de salida no puede ser anterior a la fecha de ingreso.");
+          return;
+        }
       }
 
       editSaveBtn.disabled = true;
       setLoading(true, "Guardando cambios del empleado...");
-
-      const pasoAInactivo = !!payload.fecha_retiro;
 
       try {
         const res = await fetch(`/api/formularios/${id}`, {
@@ -555,17 +571,19 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify(payload),
         });
 
-        const data = await res.json().catch(() => null);
+        const txt = await res.text();
+        let data = null;
+        try { data = txt ? JSON.parse(txt) : null; } catch { data = null; }
 
         if (!res.ok) {
-          console.error("Error actualizando empleado:", data);
-          showEditAlert(
-            data?.error || "No se pudo actualizar el empleado. Intenta nuevamente."
-          );
+          const msg =
+            (data && (data.error || data.message || data.details)) ||
+            (txt || "No se pudo actualizar el empleado.");
+          console.error("Error actualizando empleado:", data || txt);
+          showEditAlert(msg);
           return;
         }
 
-        // Actualizar en memoria (soporta {data: {...}} o el objeto directo)
         const updated = (data && (data.data || data)) || {};
         const idx = empleados.findIndex((e) => e.id === Number(id));
         if (idx !== -1) {
@@ -575,26 +593,17 @@ document.addEventListener("DOMContentLoaded", () => {
         aplicarFiltro();
         closeEditModal();
 
-        // Modal de confirmación de éxito
-        if (pasoAInactivo) {
-          openResultModal({
-            type: "success",
-            title: "Cambios guardados",
-            message:
-              "El empleado quedó INACTIVO porque se estableció una fecha de salida.",
-          });
-        } else {
-          openResultModal({
-            type: "success",
-            title: "Cambios guardados",
-            message: "El registro del empleado se actualizó correctamente.",
-          });
+        const ahoraTieneRetiro = !!payload.fecha_retiro;
+        let msg = "El registro del empleado se actualizó correctamente.";
+        if (!prevTeniaRetiro && ahoraTieneRetiro) {
+          msg = "El empleado quedó INACTIVO porque se estableció una fecha de salida.";
+        } else if (prevTeniaRetiro && !ahoraTieneRetiro) {
+          msg = "El empleado quedó ACTIVO porque se eliminó la fecha de salida.";
         }
+        openResultModal({ type: "success", title: "Cambios guardados", message: msg });
       } catch (err) {
         console.error(err);
-        showEditAlert(
-          "Error de conexión al actualizar. Verifica tu red o el servidor."
-        );
+        showEditAlert("Error de conexión al actualizar. Verifica tu red o el servidor.");
       } finally {
         editSaveBtn.disabled = false;
         setLoading(false);
