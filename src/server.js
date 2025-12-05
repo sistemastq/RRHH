@@ -1,7 +1,9 @@
 // src/server.js
 // reemplaza tu require('dotenv').config();
-const path = require("path");
-require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+
+
 
 const express = require("express");
 const cors = require("cors");
@@ -24,7 +26,7 @@ const publicPath = path.join(__dirname, "..", "public");
 // --- Seguridad base ---
 app.disable("x-powered-by");
 // al inicio de server.js (después de crear app)
-app.set("trust proxy", 1);
+app.set('trust proxy', 1);
 app.use(pinoHttp);
 
 // usa tu dominio real
