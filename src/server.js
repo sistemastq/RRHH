@@ -124,23 +124,24 @@ function guardPage(req, res, next) {
 // --- Validación (Zod) ---
 const formSchema = z.object({
   nombre: z.string().min(1).max(200),
-  documento: z.string().min(4).max(30),
+  documento: z.string().min(4), // si quieres solo dígitos: .regex(/^\d+$/)
   fecha_afiliacion: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   cargo: z.string().min(1).max(120),
   tipo_documento: z.string().min(1).max(10),
   info_adicional: z.string().min(1),
-  EPS: z.string().optional().default(""),
-  ARL: z.string().optional().default(""),
-  fondo_pension: z.string().optional().default(""),
-  salario: z.number().nonnegative(),
-  telefono: z.string().min(7).max(20),
-  correo: z.string().email().optional().or(z.literal("")),
-  direccion_residencia: z.string().optional().default(""),
-  fecha_retiro: z.string().nullable().optional(),
+  EPS: z.string().optional().default(''),
+  ARL: z.string().optional().default(''),
+  fondo_pension: z.string().optional().default(''),
+  salario: z.coerce.number().nonnegative(),   // 👈 acepta "2500000" como número
+  telefono: z.string().min(7).max(20),        // lo tratamos como string
+  correo: z.union([z.string().email(), z.literal('')]).optional(),
+  direccion_residencia: z.string().optional().default(''),
+  fecha_retiro: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.null()]).optional(),
   fecha_nacimiento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  caja_compensacion: z.string().optional().default(""),
+  caja_compensacion: z.string().optional().default(''),
   sexo: z.string().min(1),
 });
+
 
 // =====================
 // ======  API  ========
