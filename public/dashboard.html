@@ -278,250 +278,518 @@
               </div>
             </div>
 
-            <div
-              class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700"
-            >
-              <table class="min-w-full border-collapse text-left text-xs">
-                <thead class="bg-slate-50 dark:bg-slate-900/60">
-                  <tr>
-                    <th class="w-8 px-2 py-2 align-middle">
-                      <input
-                        id="selectAllRows"
-                        type="checkbox"
-                        class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/60"
-                      />
-                    </th>
-
-                    <th class="px-2 py-2">
-                      <button
-                        type="button"
-                        data-sort-field="nombre"
-                        class="flex items-center gap-1"
-                      >
-                        <span>Nombre</span>
-                        <span
-                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
-                          data-icon-field="nombre"
-                          >unfold_more</span
-                        >
-                      </button>
-                    </th>
-
-                    <th class="px-2 py-2">
-                      <button
-                        type="button"
-                        data-sort-field="documento"
-                        class="flex items-center gap-1"
-                      >
-                        <span>Documento</span>
-                        <span
-                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
-                          data-icon-field="documento"
-                          >unfold_more</span
-                        >
-                      </button>
-                    </th>
-
-                    <th class="px-2 py-2">
-                      <button
-                        type="button"
-                        data-sort-field="edad"
-                        class="flex items-center gap-1"
-                      >
-                        <span>Edad</span>
-                        <span
-                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
-                          data-icon-field="edad"
-                          >unfold_more</span
-                        >
-                      </button>
-                    </th>
-
-                    <th class="px-2 py-2">
-                      <button
-                        type="button"
-                        data-sort-field="cargo"
-                        class="flex items-center gap-1"
-                      >
-                        <span>Cargo</span>
-                        <span
-                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
-                          data-icon-field="cargo"
-                          >unfold_more</span
-                        >
-                      </button>
-                    </th>
-
-                    <th class="px-2 py-2">
-                      <button
-                        type="button"
-                        data-sort-field="fecha_afiliacion"
-                        class="flex items-center gap-1"
-                      >
-                        <span>Fecha ingreso</span>
-                        <span
-                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
-                          data-icon-field="fecha_afiliacion"
-                          >unfold_more</span
-                        >
-                      </button>
-                    </th>
-
-                    <th class="px-2 py-2">
-                      <button
-                        type="button"
-                        data-sort-field="fecha_retiro"
-                        class="flex items-center gap-1"
-                      >
-                        <span>Fecha salida</span>
-                        <span
-                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
-                          data-icon-field="fecha_retiro"
-                          >unfold_more</span
-                        >
-                      </button>
-                    </th>
-
-                    <th class="px-2 py-2">
-                      <button
-                        type="button"
-                        data-sort-field="sexo"
-                        class="flex items-center gap-1"
-                      >
-                        <span>Sexo</span>
-                        <span
-                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
-                          data-icon-field="sexo"
-                          >unfold_more</span
-                        >
-                      </button>
-                    </th>
-
-                    <th class="px-2 py-2">
-                      <button
-                        type="button"
-                        data-sort-field="EPS"
-                        class="flex items-center gap-1"
-                      >
-                        <span>EPS</span>
-                        <span
-                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
-                          data-icon-field="EPS"
-                          >unfold_more</span
-                        >
-                      </button>
-                    </th>
-
-                    <th class="px-2 py-2">
-                      <button
-                        type="button"
-                        data-sort-field="ARL"
-                        class="flex items-center gap-1"
-                      >
-                        <span>ARL</span>
-                        <span
-                          class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
-                          data-icon-field="ARL"
-                          >unfold_more</span
-                        >
-                      </button>
-                    </th>
-                  </tr>
-
-                  <!-- Fila de filtros -->
-                  <tr class="border-t border-slate-200 dark:border-slate-700">
-                    <th class="px-2 py-1"></th>
-
-                    <th class="px-2 py-1">
-                      <input
-                        type="text"
-                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                        placeholder="Filtrar nombre"
-                        data-field="nombre"
-                      />
-                    </th>
-
-                    <th class="px-2 py-1">
-                      <input
-                        type="text"
-                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                        placeholder="Documento"
-                        data-field="documento"
-                      />
-                    </th>
-
-                    <th class="px-2 py-1">
-                      <input
-                        type="text"
-                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                        placeholder="Edad"
-                        data-field="edad"
-                      />
-                    </th>
-
-                    <th class="px-2 py-1">
-                      <input
-                        type="text"
-                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                        placeholder="Cargo"
-                        data-field="cargo"
-                      />
-                    </th>
-
-                    <th class="px-2 py-1">
-                      <input
-                        type="text"
-                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                        placeholder="AAAA-MM-DD"
-                        data-field="fecha_afiliacion"
-                      />
-                    </th>
-
-                    <th class="px-2 py-1">
-                      <input
-                        type="text"
-                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                        placeholder="AAAA-MM-DD"
-                        data-field="fecha_retiro"
-                      />
-                    </th>
-
-                    <th class="px-2 py-1">
-                      <input
-                        type="text"
-                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                        placeholder="Sexo"
-                        data-field="sexo"
-                      />
-                    </th>
-
-                    <th class="px-2 py-1">
-                      <input
-                        type="text"
-                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                        placeholder="EPS"
-                        data-field="EPS"
-                      />
-                    </th>
-
-                    <th class="px-2 py-1">
-                      <input
-                        type="text"
-                        class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] text-slate-800 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                        placeholder="ARL"
-                        data-field="ARL"
-                      />
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody
-                  id="employeesTableBody"
-                  class="divide-y divide-slate-100 dark:divide-slate-800"
+            <!-- WRAPPER con overlays de scroll -->
+            <div id="tableScrollArea" class="relative">
+              <!-- Overlays (izq/der) con degradado + botón -->
+              <div
+                id="scrollLeft"
+                class="pointer-events-none absolute inset-y-0 left-0 z-10 hidden items-center"
+                aria-hidden="true"
+              >
+                <div
+                  class="h-full w-16 bg-gradient-to-r from-white/95 to-transparent dark:from-slate-900/95"
+                ></div>
+                <button
+                  id="scrollLeftBtn"
+                  type="button"
+                  class="pointer-events-auto absolute left-1 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow ring-1 ring-slate-200 hover:bg-white dark:bg-slate-800/90 dark:ring-slate-700"
+                  title="Ver columnas a la izquierda"
+                  aria-label="Desplazar tabla a la izquierda"
                 >
-                  <!-- filas generadas por dashboard.js -->
-                </tbody>
-              </table>
+                  <span class="material-symbols-outlined text-[20px]"
+                    >chevron_left</span
+                  >
+                </button>
+              </div>
+
+              <div
+                id="scrollRight"
+                class="pointer-events-none absolute inset-y-0 right-0 z-10 hidden items-center justify-end"
+                aria-hidden="true"
+              >
+                <div
+                  class="h-full w-16 bg-gradient-to-l from-white/95 to-transparent dark:from-slate-900/95"
+                ></div>
+                <button
+                  id="scrollRightBtn"
+                  type="button"
+                  class="pointer-events-auto absolute right-1 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow ring-1 ring-slate-200 hover:bg-white dark:bg-slate-800/90 dark:ring-slate-700"
+                  title="Ver más columnas"
+                  aria-label="Desplazar tabla a la derecha"
+                >
+                  <span class="material-symbols-outlined text-[20px]"
+                    >chevron_right</span
+                  >
+                </button>
+              </div>
+
+              <!-- Scroller real -->
+              <div
+                id="tableScroller"
+                class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700"
+                role="region"
+                aria-label="Tabla de empleados con desplazamiento horizontal"
+              >
+                <table class="min-w-full border-collapse text-left text-xs">
+                  <thead class="bg-slate-50 dark:bg-slate-900/60">
+                    <!-- Encabezados con orden -->
+                    <tr>
+                      <th class="w-8 px-2 py-2 align-middle">
+                        <input
+                          id="selectAllRows"
+                          type="checkbox"
+                          class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/60"
+                        />
+                      </th>
+
+                      <!-- NOTA: orden y data-sort-field deben coincidir con dashboard.js -->
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[180px]">
+                        <button
+                          type="button"
+                          data-sort-field="nombre"
+                          class="flex items-center gap-1"
+                        >
+                          <span>Nombre</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="nombre"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[120px]">
+                        <button
+                          type="button"
+                          data-sort-field="tipo_documento"
+                          class="flex items-center gap-1"
+                        >
+                          <span>Tipo Doc.</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="tipo_documento"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[140px]">
+                        <button
+                          type="button"
+                          data-sort-field="documento"
+                          class="flex items-center gap-1"
+                        >
+                          <span>Documento</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="documento"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[120px]">
+                        <button
+                          type="button"
+                          data-sort-field="fecha_nacimiento"
+                          class="flex items-center gap-1"
+                        >
+                          <span>F. nacimiento</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="fecha_nacimiento"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[80px]">
+                        <button
+                          type="button"
+                          data-sort-field="edad"
+                          class="flex items-center gap-1"
+                        >
+                          <span>Edad</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="edad"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[160px]">
+                        <button
+                          type="button"
+                          data-sort-field="cargo"
+                          class="flex items-center gap-1"
+                        >
+                          <span>Cargo</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="cargo"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[120px]">
+                        <button
+                          type="button"
+                          data-sort-field="fecha_afiliacion"
+                          class="flex items-center gap-1"
+                        >
+                          <span>F. ingreso</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="fecha_afiliacion"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[120px]">
+                        <button
+                          type="button"
+                          data-sort-field="fecha_retiro"
+                          class="flex items-center gap-1"
+                        >
+                          <span>F. salida</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="fecha_retiro"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[140px]">
+                        <button
+                          type="button"
+                          data-sort-field="salario"
+                          class="flex items-center gap-1"
+                        >
+                          <span>Salario (COP)</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="salario"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[140px]">
+                        <button
+                          type="button"
+                          data-sort-field="telefono"
+                          class="flex items-center gap-1"
+                        >
+                          <span>Teléfono</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="telefono"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[220px]">
+                        <button
+                          type="button"
+                          data-sort-field="correo"
+                          class="flex items-center gap-1"
+                        >
+                          <span>Correo</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="correo"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[260px]">
+                        <button
+                          type="button"
+                          data-sort-field="direccion_residencia"
+                          class="flex items-center gap-1"
+                        >
+                          <span>Dirección</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="direccion_residencia"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[100px]">
+                        <button
+                          type="button"
+                          data-sort-field="sexo"
+                          class="flex items-center gap-1"
+                        >
+                          <span>Sexo</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="sexo"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[140px]">
+                        <button
+                          type="button"
+                          data-sort-field="EPS"
+                          class="flex items-center gap-1"
+                        >
+                          <span>EPS</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="EPS"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[140px]">
+                        <button
+                          type="button"
+                          data-sort-field="ARL"
+                          class="flex items-center gap-1"
+                        >
+                          <span>ARL</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="ARL"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[160px]">
+                        <button
+                          type="button"
+                          data-sort-field="fondo_pension"
+                          class="flex items-center gap-1"
+                        >
+                          <span>Fondo pensión</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="fondo_pension"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[160px]">
+                        <button
+                          type="button"
+                          data-sort-field="caja_compensacion"
+                          class="flex items-center gap-1"
+                        >
+                          <span>Caja comp.</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="caja_compensacion"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+
+                      <th class="px-2 py-2 whitespace-nowrap min-w-[300px]">
+                        <button
+                          type="button"
+                          data-sort-field="info_adicional"
+                          class="flex items-center gap-1"
+                        >
+                          <span>Información adicional</span>
+                          <span
+                            class="material-symbols-outlined text-[16px] sort-icon text-slate-400"
+                            data-icon-field="info_adicional"
+                            >unfold_more</span
+                          >
+                        </button>
+                      </th>
+                    </tr>
+
+                    <!-- Fila de filtros -->
+                    <tr class="border-t border-slate-200 dark:border-slate-700">
+                      <th class="px-2 py-1"></th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="Nombre"
+                          data-field="nombre"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="Tipo Doc."
+                          data-field="tipo_documento"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="Documento"
+                          data-field="documento"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="AAAA-MM-DD"
+                          data-field="fecha_nacimiento"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="Edad"
+                          data-field="edad"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="Cargo"
+                          data-field="cargo"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="AAAA-MM-DD"
+                          data-field="fecha_afiliacion"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="AAAA-MM-DD"
+                          data-field="fecha_retiro"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="Salario"
+                          data-field="salario"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="Teléfono"
+                          data-field="telefono"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="Correo"
+                          data-field="correo"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="Dirección"
+                          data-field="direccion_residencia"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="Sexo"
+                          data-field="sexo"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="EPS"
+                          data-field="EPS"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="ARL"
+                          data-field="ARL"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="Fondo pensión"
+                          data-field="fondo_pension"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="Caja comp."
+                          data-field="caja_compensacion"
+                        />
+                      </th>
+
+                      <th class="px-2 py-1">
+                        <input
+                          type="text"
+                          class="filter-input h-7 w-full rounded border border-slate-200 bg-white px-2 text-[11px] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900"
+                          placeholder="Info adicional"
+                          data-field="info_adicional"
+                        />
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody
+                    id="employeesTableBody"
+                    class="divide-y divide-slate-100 dark:divide-slate-800"
+                  >
+                    <!-- filas generadas por dashboard.js -->
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <p

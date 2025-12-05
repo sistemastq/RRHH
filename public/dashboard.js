@@ -1,20 +1,30 @@
 // public/dashboard.js
-// Todo el JS del panel sin inline handlers (compatible con tu CSP)
-
 (function () {
-  // ====== Helpers ======
+  // ===== Helpers =====
   const $ = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
 
   const fmtDate = (iso) => {
     if (!iso) return "—";
-    // Espera 'YYYY-MM-DD' o ISO
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
+  };
+
+  const fmtMoney = (n) => {
+    if (n === null || n === undefined || Number.isNaN(Number(n))) return "—";
+    try {
+      return new Intl.NumberFormat("es-CO", {
+        style: "currency",
+        currency: "COP",
+        maximumFractionDigits: 0,
+      }).format(Number(n));
+    } catch {
+      return String(n);
+    }
   };
 
   const calcEdad = (iso) => {
@@ -36,20 +46,6 @@
     };
   };
 
-  const setLoading = (show, text = "Cargando información del panel...") => {
-    const modal = $("#dashboardLoadingModal");
-    const label = $("#dashboardLoadingText");
-    if (!modal) return;
-    if (label) label.textContent = text;
-    if (show) {
-      modal.classList.remove("hidden");
-      modal.classList.add("flex");
-    } else {
-      modal.classList.add("hidden");
-      modal.classList.remove("flex");
-    }
-  };
-
   const downloadText = (filename, text) => {
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -66,7 +62,6 @@
   };
 
   const toCSV = (rows, columns) => {
-    // columns: [{key:'nombre', label:'Nombre'}, ...]
     const header = columns.map((c) => `"${c.label.replace(/"/g, '""')}"`).join(",");
     const body = rows
       .map((r) =>
@@ -92,7 +87,7 @@
     }
   };
 
-  // ====== Elementos del DOM ======
+  // ===== DOM =====
   const greetingEl = $("#dashboardGreeting");
   const tbody = $("#employeesTableBody");
   const tableSummary = $("#tableSummary");
@@ -102,7 +97,6 @@
   const exportAllBtn = $("#exportAllBtn");
   const exportFilteredBtn = $("#exportFilteredBtn");
 
-  // Navegación + logout (CSP friendly)
   const goToEmployeesBtn = $("#goToEmployeesBtn");
   const goToFormBtn = $("#goToFormBtn");
   const quickAddBtn = $("#quickAddBtn");
@@ -112,36 +106,61 @@
   const logoutCancelBtn = $("#logoutCancelBtn");
   const logoutConfirmBtn = $("#logoutConfirmBtn");
 
-  // Sorting
   const sortButtons = $$("button[data-sort-field]");
-  const sortIcons = new Map(
-    $$("span.sort-icon").map((el) => [el.getAttribute("data-icon-field"), el])
-  );
-
-  // Filters
+  const sortIcons = new Map($$("span.sort-icon").map((el) => [el.getAttribute("data-icon-field"), el]));
   const filterInputs = $$(".filter-input");
 
-  // ====== Estado ======
-  let allRows = []; // datos crudos de la API (mapeados)
-  let filtered = []; // datos tras filtro y orden
-  let selectedIds = new Set(); // selección de filas (por id)
-  let sortState = { field: null, dir: null }; // dir: 'asc'|'desc'|null
-  let filters = {}; // { nombre:'ana', documento:'123', ... }
+  // Scroll hint controls
+  const scroller = $("#tableScroller");
+  const hintLeft = $("#scrollLeft");
+  const hintRight = $("#scrollRight");
+  const btnLeft = $("#scrollLeftBtn");
+  const btnRight = $("#scrollRightBtn");
 
-  // Columnas que mostramos en tabla / export
+  const setLoading = (show, text = "Cargando información del panel...") => {
+    const modal = $("#dashboardLoadingModal");
+    const label = $("#dashboardLoadingText");
+    if (!modal) return;
+    if (label) label.textContent = text;
+    if (show) {
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    } else {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+  };
+
+  // ===== Estado =====
+  let allRows = [];
+  let filtered = [];
+  let selectedIds = new Set();
+  let sortState = { field: null, dir: null };
+  let filters = {};
+
+  // Definición de columnas (orden debe coincidir con THEAD)
   const columns = [
-    { key: "nombre", label: "Nombre" },
-    { key: "documento", label: "Documento" },
-    { key: "edad", label: "Edad" },
-    { key: "cargo", label: "Cargo" },
-    { key: "fecha_afiliacion", label: "Fecha ingreso" },
-    { key: "fecha_retiro", label: "Fecha salida" },
-    { key: "sexo", label: "Sexo" },
-    { key: "EPS", label: "EPS" },
-    { key: "ARL", label: "ARL" },
+    { key: "nombre", label: "Nombre", cellClass: "min-w-[180px] whitespace-nowrap" },
+    { key: "tipo_documento", label: "Tipo Doc.", cellClass: "min-w-[120px] whitespace-nowrap" },
+    { key: "documento", label: "Documento", cellClass: "min-w-[140px] whitespace-nowrap" },
+    { key: "fecha_nacimiento", label: "F. nacimiento", cellClass: "min-w-[120px] whitespace-nowrap", render: fmtDate },
+    { key: "edad", label: "Edad", cellClass: "min-w-[80px] whitespace-nowrap" },
+    { key: "cargo", label: "Cargo", cellClass: "min-w-[160px] whitespace-nowrap" },
+    { key: "fecha_afiliacion", label: "F. ingreso", cellClass: "min-w-[120px] whitespace-nowrap", render: fmtDate },
+    { key: "fecha_retiro", label: "F. salida", cellClass: "min-w-[120px] whitespace-nowrap", render: fmtDate },
+    { key: "salario", label: "Salario (COP)", cellClass: "min-w-[140px] whitespace-nowrap", render: fmtMoney },
+    { key: "telefono", label: "Teléfono", cellClass: "min-w-[140px] whitespace-nowrap" },
+    { key: "correo", label: "Correo", cellClass: "min-w-[220px] whitespace-nowrap" },
+    { key: "direccion_residencia", label: "Dirección", cellClass: "min-w-[260px] whitespace-nowrap" },
+    { key: "sexo", label: "Sexo", cellClass: "min-w-[100px] whitespace-nowrap" },
+    { key: "EPS", label: "EPS", cellClass: "min-w-[140px] whitespace-nowrap" },
+    { key: "ARL", label: "ARL", cellClass: "min-w-[140px] whitespace-nowrap" },
+    { key: "fondo_pension", label: "Fondo pensión", cellClass: "min-w-[160px] whitespace-nowrap" },
+    { key: "caja_compensacion", label: "Caja comp.", cellClass: "min-w-[160px] whitespace-nowrap" },
+    { key: "info_adicional", label: "Información adicional", cellClass: "min-w-[300px] whitespace-nowrap", truncate: true },
   ];
 
-  // ====== Render ======
+  // ===== Render =====
   const renderGreeting = () => {
     if (!greetingEl) return;
     const name = getGreetingName();
@@ -154,8 +173,14 @@
     if (statActivos) statActivos.textContent = String(activos);
   };
 
+  const cellText = (row, col) => {
+    const raw = row[col.key];
+    if (col.render) return col.render(raw);
+    if (col.key === "info_adicional") return raw || "—";
+    return raw ?? "—";
+  };
+
   const rowToHTML = (r) => {
-    // Importante: solo textContent, sin HTML dinámico (CSP / XSS-safe)
     const tr = document.createElement("tr");
     tr.setAttribute("data-id", r.id);
 
@@ -174,22 +199,23 @@
     tdSel.appendChild(cb);
     tr.appendChild(tdSel);
 
-    const addTD = (text) => {
+    // Celdas de datos
+    for (const col of columns) {
       const td = document.createElement("td");
-      td.className = "px-2 py-2 align-middle";
-      td.textContent = text ?? "—";
-      tr.appendChild(td);
-    };
+      td.className = `px-2 py-2 align-middle ${col.cellClass || ""}`;
+      const text = cellText(r, col);
 
-    addTD(r.nombre);
-    addTD(r.documento);
-    addTD(r.edad);
-    addTD(r.cargo);
-    addTD(fmtDate(r.fecha_afiliacion));
-    addTD(fmtDate(r.fecha_retiro));
-    addTD(r.sexo || "—");
-    addTD(r.EPS || "—");
-    addTD(r.ARL || "—");
+      if (col.truncate) {
+        td.title = typeof r[col.key] === "string" ? r[col.key] : String(r[col.key] ?? "");
+        const span = document.createElement("span");
+        span.className = "inline-block max-w-[420px] truncate align-middle";
+        span.textContent = text;
+        td.appendChild(span);
+      } else {
+        td.textContent = text;
+      }
+      tr.appendChild(td);
+    }
 
     return tr;
   };
@@ -204,12 +230,12 @@
     const total = allRows.length;
     const shown = filtered.length;
     if (tableSummary) {
-      tableSummary.textContent =
-        total === shown
-          ? `${shown} empleados`
-          : `${shown} de ${total} empleados`;
+      tableSummary.textContent = total === shown ? `${shown} empleados` : `${shown} de ${total} empleados`;
     }
     updateSelectAllState();
+
+    // Actualiza pistas de scroll tras pintar
+    queueMicrotask(updateScrollHints);
   };
 
   const updateSelectAllState = () => {
@@ -232,27 +258,25 @@
   };
 
   const setSortIcon = (field, dir) => {
-    // Reset
     sortIcons.forEach((el) => (el.textContent = "unfold_more"));
     if (!field || !dir) return;
     const el = sortIcons.get(field);
-    if (!el) return;
-    el.textContent = dir === "asc" ? "arrow_upward" : "arrow_downward";
+    if (el) el.textContent = dir === "asc" ? "arrow_upward" : "arrow_downward";
   };
 
-  // ====== Filtro + Orden ======
+  // ===== Filtro + Orden =====
   const applyFilters = () => {
     let data = [...allRows];
     for (const [key, value] of Object.entries(filters)) {
       const v = value?.trim().toLowerCase();
       if (!v) continue;
-      data = data.filter((row) => {
-        const cell = (row[key] ?? "").toString().toLowerCase();
-        return cell.includes(v);
-      });
+      data = data.filter((row) => String(row[key] ?? "").toLowerCase().includes(v));
     }
     filtered = data;
   };
+
+  const isDateField = (f) => f === "fecha_afiliacion" || f === "fecha_retiro" || f === "fecha_nacimiento";
+  const isNumericField = (f) => f === "edad" || f === "salario" || f === "documento" || f === "telefono";
 
   const applySort = () => {
     if (!sortState.field || !sortState.dir) return;
@@ -263,21 +287,20 @@
       const av = a[field];
       const bv = b[field];
 
-      // fechas
-      if (field === "fecha_afiliacion" || field === "fecha_retiro") {
+      if (isDateField(field)) {
         const ad = av ? new Date(av).getTime() : 0;
         const bd = bv ? new Date(bv).getTime() : 0;
         return (ad - bd) * mult;
       }
 
-      // números (edad, documento si llega como numérico)
-      if (field === "edad") {
-        const an = Number.isNaN(Number(a.edad)) ? -Infinity : Number(a.edad);
-        const bn = Number.isNaN(Number(b.edad)) ? -Infinity : Number(b.edad);
-        return (an - bn) * mult;
+      if (isNumericField(field)) {
+        const an = Number(av);
+        const bn = Number(bv);
+        const aa = Number.isNaN(an) ? -Infinity : an;
+        const bb = Number.isNaN(bn) ? -Infinity : bn;
+        return (aa - bb) * mult;
       }
 
-      // string
       return String(av ?? "").localeCompare(String(bv ?? "")) * mult;
     });
   };
@@ -288,7 +311,7 @@
     renderTable();
   };
 
-  // ====== Eventos ======
+  // ===== Eventos =====
   const initFilters = () => {
     filterInputs.forEach((inp) => {
       const field = inp.getAttribute("data-field");
@@ -310,15 +333,11 @@
         const field = btn.getAttribute("data-sort-field");
         if (!field) return;
         // ciclo: null -> asc -> desc -> null
-        if (sortState.field !== field) {
-          sortState = { field, dir: "asc" };
-        } else if (sortState.dir === "asc") {
-          sortState.dir = "desc";
-        } else if (sortState.dir === "desc") {
-          sortState = { field: null, dir: null };
-        } else {
-          sortState = { field, dir: "asc" };
-        }
+        if (sortState.field !== field) sortState = { field, dir: "asc" };
+        else if (sortState.dir === "asc") sortState.dir = "desc";
+        else if (sortState.dir === "desc") sortState = { field: null, dir: null };
+        else sortState = { field, dir: "asc" };
+
         setSortIcon(sortState.field, sortState.dir);
         recompute();
       });
@@ -328,13 +347,9 @@
   const initSelectAll = () => {
     if (!selectAllRows) return;
     selectAllRows.addEventListener("change", () => {
-      if (selectAllRows.checked) {
-        filtered.forEach((r) => selectedIds.add(r.id));
-      } else {
-        // quitar selección solo de los visibles
-        filtered.forEach((r) => selectedIds.delete(r.id));
-      }
-      renderTable(); // vuelve a pintar checks visibles
+      if (selectAllRows.checked) filtered.forEach((r) => selectedIds.add(r.id));
+      else filtered.forEach((r) => selectedIds.delete(r.id));
+      renderTable();
     });
   };
 
@@ -345,7 +360,6 @@
     });
 
     exportFilteredBtn?.addEventListener("click", () => {
-      // Si hay filas seleccionadas visibles, exporta selección; si no, exporta filtro actual
       const selected = filtered.filter((r) => selectedIds.has(r.id));
       const rows = selected.length > 0 ? selected : filtered;
       const csv = toCSV(rows, columns);
@@ -384,41 +398,70 @@
       if (e.key === "Escape") {
         if (!logoutModal?.classList.contains("hidden")) {
           e.preventDefault();
-          const el = document.activeElement;
-          if (el && typeof el.blur === "function") el.blur();
+          document.activeElement?.blur?.();
           closeLogout();
         }
       }
     });
   };
 
-  // ====== Carga de datos ======
-  const mapRow = (r) => {
-    // Normalizamos nombres de campos según tu API / BD
-    // r tiene: id, nombre, documento, fecha_afiliacion, cargo, tipo_documento,
-    // info_adicional, ARL, EPS, fondo_pension, salario, telefono, correo,
-    // direccion_residencia, fecha_retiro, fecha_nacimiento, caja_compensacion, sexo
-    return {
-      id: r.id,
-      nombre: r.nombre ?? "",
-      documento: r.documento ?? "",
-      edad: calcEdad(r.fecha_nacimiento),
-      cargo: r.cargo ?? "",
-      fecha_afiliacion: r.fecha_afiliacion ?? null,
-      fecha_retiro: r.fecha_retiro ?? null,
-      sexo: r.sexo ?? "",
-      EPS: r.EPS ?? "",
-      ARL: r.ARL ?? "",
-    };
+  // ===== Scroll hints =====
+  const updateScrollHints = () => {
+    if (!scroller || !hintLeft || !hintRight) return;
+    const max = scroller.scrollWidth - scroller.clientWidth;
+    if (max <= 0) {
+      hintLeft.classList.add("hidden");
+      hintRight.classList.add("hidden");
+      return;
+    }
+    if (scroller.scrollLeft > 4) hintLeft.classList.remove("hidden");
+    else hintLeft.classList.add("hidden");
+
+    if (scroller.scrollLeft < max - 4) hintRight.classList.remove("hidden");
+    else hintRight.classList.add("hidden");
   };
+
+  const initScrollHints = () => {
+    if (!scroller) return;
+    scroller.addEventListener("scroll", updateScrollHints, { passive: true });
+    window.addEventListener("resize", debounce(updateScrollHints, 100));
+    btnLeft?.addEventListener("click", () => {
+      scroller.scrollBy({ left: -Math.max(200, scroller.clientWidth * 0.8), behavior: "smooth" });
+    });
+    btnRight?.addEventListener("click", () => {
+      scroller.scrollBy({ left: Math.max(200, scroller.clientWidth * 0.8), behavior: "smooth" });
+    });
+    // Primer cálculo
+    setTimeout(updateScrollHints, 0);
+  };
+
+  // ===== Carga de datos =====
+  const mapRow = (r) => ({
+    id: r.id,
+    nombre: r.nombre ?? "",
+    tipo_documento: r.tipo_documento ?? "",
+    documento: String(r.documento ?? ""),
+    fecha_nacimiento: r.fecha_nacimiento ?? null,
+    edad: calcEdad(r.fecha_nacimiento),
+    cargo: r.cargo ?? "",
+    fecha_afiliacion: r.fecha_afiliacion ?? null,
+    fecha_retiro: r.fecha_retiro ?? null,
+    salario: typeof r.salario === "number" ? r.salario : Number(r.salario) || null,
+    telefono: String(r.telefono ?? ""),
+    correo: r.correo ?? "",
+    direccion_residencia: r.direccion_residencia ?? "",
+    sexo: r.sexo ?? "",
+    EPS: r.EPS ?? "",
+    ARL: r.ARL ?? "",
+    fondo_pension: r.fondo_pension ?? "",
+    caja_compensacion: r.caja_compensacion ?? "",
+    info_adicional: r.info_adicional ?? "",
+  });
 
   const fetchData = async () => {
     setLoading(true, "Cargando información del panel...");
     try {
-      const res = await fetch("/api/formularios", {
-        // same-origin incluye cookies httpOnly por defecto
-        // credentials: "same-origin" // opcional
-      });
+      const res = await fetch("/api/formularios");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const list = await res.json();
       allRows = Array.isArray(list) ? list.map(mapRow) : [];
@@ -432,15 +475,13 @@
       filtered = [];
       renderStats();
       renderTable();
-      if (tableSummary)
-        tableSummary.textContent =
-          "No fue posible cargar los datos. Intenta recargar la página.";
+      if (tableSummary) tableSummary.textContent = "No fue posible cargar los datos. Intenta recargar la página.";
     } finally {
       setLoading(false);
     }
   };
 
-  // ====== Init ======
+  // ===== Init =====
   document.addEventListener("DOMContentLoaded", () => {
     renderGreeting();
     initFilters();
@@ -448,6 +489,7 @@
     initSelectAll();
     initExport();
     initNavAndLogout();
+    initScrollHints();
     fetchData();
   });
 })();
