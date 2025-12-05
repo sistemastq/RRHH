@@ -66,10 +66,7 @@
     const body = rows
       .map((r) =>
         columns
-          .map((c) => {
-            const v = r[c.key] ?? "";
-            return `"${String(v).replace(/"/g, '""')}"`;
-          })
+          .map((c) => `"${String((r[c.key] ?? (c.render ? c.render(r[c.key]) : "")) || "").replace(/"/g, '""')}"`)
           .join(",")
       )
       .join("\n");
@@ -82,9 +79,7 @@
       if (!raw) return null;
       const obj = JSON.parse(raw);
       return obj?.nombre || obj?.name || null;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   };
 
   // ===== DOM =====
@@ -110,7 +105,7 @@
   const sortIcons = new Map($$("span.sort-icon").map((el) => [el.getAttribute("data-icon-field"), el]));
   const filterInputs = $$(".filter-input");
 
-  // Scroll hint controls
+  // Scroll hint controls (si tienes los overlays)
   const scroller = $("#tableScroller");
   const hintLeft = $("#scrollLeft");
   const hintRight = $("#scrollRight");
@@ -122,42 +117,40 @@
     const label = $("#dashboardLoadingText");
     if (!modal) return;
     if (label) label.textContent = text;
-    if (show) {
-      modal.classList.remove("hidden");
-      modal.classList.add("flex");
-    } else {
-      modal.classList.add("hidden");
-      modal.classList.remove("flex");
-    }
+    if (show) { modal.classList.remove("hidden"); modal.classList.add("flex"); }
+    else { modal.classList.add("hidden"); modal.classList.remove("flex"); }
   };
 
   // ===== Estado =====
   let allRows = [];
+  let activeRows = [];
+  let historicoRows = [];
   let filtered = [];
   let selectedIds = new Set();
   let sortState = { field: null, dir: null };
   let filters = {};
+  let currentView = "activos"; // 'activos' | 'historico'
 
-  // Definición de columnas (orden debe coincidir con THEAD)
+  // Columnas (coincidir con THEAD)
   const columns = [
-    { key: "nombre", label: "Nombre", cellClass: "min-w-[180px] whitespace-nowrap" },
-    { key: "tipo_documento", label: "Tipo Doc.", cellClass: "min-w-[120px] whitespace-nowrap" },
-    { key: "documento", label: "Documento", cellClass: "min-w-[140px] whitespace-nowrap" },
-    { key: "fecha_nacimiento", label: "F. nacimiento", cellClass: "min-w-[120px] whitespace-nowrap", render: fmtDate },
-    { key: "edad", label: "Edad", cellClass: "min-w-[80px] whitespace-nowrap" },
-    { key: "cargo", label: "Cargo", cellClass: "min-w-[160px] whitespace-nowrap" },
-    { key: "fecha_afiliacion", label: "F. ingreso", cellClass: "min-w-[120px] whitespace-nowrap", render: fmtDate },
-    { key: "fecha_retiro", label: "F. salida", cellClass: "min-w-[120px] whitespace-nowrap", render: fmtDate },
-    { key: "salario", label: "Salario (COP)", cellClass: "min-w-[140px] whitespace-nowrap", render: fmtMoney },
-    { key: "telefono", label: "Teléfono", cellClass: "min-w-[140px] whitespace-nowrap" },
-    { key: "correo", label: "Correo", cellClass: "min-w-[220px] whitespace-nowrap" },
-    { key: "direccion_residencia", label: "Dirección", cellClass: "min-w-[260px] whitespace-nowrap" },
-    { key: "sexo", label: "Sexo", cellClass: "min-w-[100px] whitespace-nowrap" },
-    { key: "EPS", label: "EPS", cellClass: "min-w-[140px] whitespace-nowrap" },
-    { key: "ARL", label: "ARL", cellClass: "min-w-[140px] whitespace-nowrap" },
-    { key: "fondo_pension", label: "Fondo pensión", cellClass: "min-w-[160px] whitespace-nowrap" },
-    { key: "caja_compensacion", label: "Caja comp.", cellClass: "min-w-[160px] whitespace-nowrap" },
-    { key: "info_adicional", label: "Información adicional", cellClass: "min-w-[300px] whitespace-nowrap", truncate: true },
+    { key: "nombre", label: "Nombre" },
+    { key: "tipo_documento", label: "Tipo Doc." },
+    { key: "documento", label: "Documento" },
+    { key: "fecha_nacimiento", label: "F. nacimiento", render: fmtDate },
+    { key: "edad", label: "Edad" },
+    { key: "cargo", label: "Cargo" },
+    { key: "fecha_afiliacion", label: "F. ingreso", render: fmtDate },
+    { key: "fecha_retiro", label: "F. salida", render: fmtDate },
+    { key: "salario", label: "Salario (COP)", render: fmtMoney },
+    { key: "telefono", label: "Teléfono" },
+    { key: "correo", label: "Correo" },
+    { key: "direccion_residencia", label: "Dirección" },
+    { key: "sexo", label: "Sexo" },
+    { key: "EPS", label: "EPS" },
+    { key: "ARL", label: "ARL" },
+    { key: "fondo_pension", label: "Fondo pensión" },
+    { key: "caja_compensacion", label: "Caja comp." },
+    { key: "info_adicional", label: "Información adicional" },
   ];
 
   // ===== Render =====
@@ -169,15 +162,15 @@
 
   const renderStats = () => {
     if (statTotal) statTotal.textContent = String(allRows.length ?? "0");
-    const activos = allRows.filter((r) => !r.fecha_retiro).length;
+    const activos = allRows.filter((r) => Number(r.activo) === 1).length;
     if (statActivos) statActivos.textContent = String(activos);
   };
 
-  const cellText = (row, col) => {
+  const getWorkingRows = () => (currentView === "activos" ? activeRows : historicoRows);
+
+  const cellValueForCSV = (row, col) => {
     const raw = row[col.key];
-    if (col.render) return col.render(raw);
-    if (col.key === "info_adicional") return raw || "—";
-    return raw ?? "—";
+    return col.render ? col.render(raw) : (raw ?? "—");
   };
 
   const rowToHTML = (r) => {
@@ -199,23 +192,32 @@
     tdSel.appendChild(cb);
     tr.appendChild(tdSel);
 
-    // Celdas de datos
-    for (const col of columns) {
+    const addTD = (text, titleIfLong=false) => {
       const td = document.createElement("td");
-      td.className = `px-2 py-2 align-middle ${col.cellClass || ""}`;
-      const text = cellText(r, col);
-
-      if (col.truncate) {
-        td.title = typeof r[col.key] === "string" ? r[col.key] : String(r[col.key] ?? "");
-        const span = document.createElement("span");
-        span.className = "inline-block max-w-[420px] truncate align-middle";
-        span.textContent = text;
-        td.appendChild(span);
-      } else {
-        td.textContent = text;
-      }
+      td.className = "px-2 py-2 align-middle";
+      if (titleIfLong && typeof text === "string") td.title = text;
+      td.textContent = text ?? "—";
       tr.appendChild(td);
-    }
+    };
+
+    addTD(r.nombre);
+    addTD(r.tipo_documento);
+    addTD(r.documento);
+    addTD(fmtDate(r.fecha_nacimiento));
+    addTD(r.edad);
+    addTD(r.cargo);
+    addTD(fmtDate(r.fecha_afiliacion));
+    addTD(fmtDate(r.fecha_retiro));
+    addTD(fmtMoney(r.salario));
+    addTD(r.telefono);
+    addTD(r.correo);
+    addTD(r.direccion_residencia);
+    addTD(r.sexo || "—");
+    addTD(r.EPS || "—");
+    addTD(r.ARL || "—");
+    addTD(r.fondo_pension || "—");
+    addTD(r.caja_compensacion || "—");
+    addTD(r.info_adicional || "—", true);
 
     return tr;
   };
@@ -223,33 +225,34 @@
   const renderTable = () => {
     if (!tbody) return;
     tbody.innerHTML = "";
-    const frag = document.createDocumentFragment();
-    filtered.forEach((r) => frag.appendChild(rowToHTML(r)));
-    tbody.appendChild(frag);
+    const base = getWorkingRows();
+    filtered.forEach((r) => tbody.appendChild(rowToHTML(r)));
 
-    const total = allRows.length;
+    const total = base.length;
     const shown = filtered.length;
     if (tableSummary) {
-      tableSummary.textContent = total === shown ? `${shown} empleados` : `${shown} de ${total} empleados`;
+      const etiqueta = currentView === "activos" ? "activos" : "histórico";
+      tableSummary.textContent = total === shown ? `${shown} ${etiqueta}` : `${shown} de ${total} ${etiqueta}`;
     }
     updateSelectAllState();
 
-    // Actualiza pistas de scroll tras pintar
+    // Hints de scroll
     queueMicrotask(updateScrollHints);
   };
 
   const updateSelectAllState = () => {
     if (!selectAllRows) return;
-    if (filtered.length === 0) {
+    const base = filtered;
+    if (base.length === 0) {
       selectAllRows.indeterminate = false;
       selectAllRows.checked = false;
       return;
     }
-    const selectedOnScreen = filtered.filter((r) => selectedIds.has(r.id)).length;
+    const selectedOnScreen = base.filter((r) => selectedIds.has(r.id)).length;
     if (selectedOnScreen === 0) {
       selectAllRows.indeterminate = false;
       selectAllRows.checked = false;
-    } else if (selectedOnScreen === filtered.length) {
+    } else if (selectedOnScreen === base.length) {
       selectAllRows.indeterminate = false;
       selectAllRows.checked = true;
     } else {
@@ -266,7 +269,8 @@
 
   // ===== Filtro + Orden =====
   const applyFilters = () => {
-    let data = [...allRows];
+    const base = getWorkingRows();
+    let data = [...base];
     for (const [key, value] of Object.entries(filters)) {
       const v = value?.trim().toLowerCase();
       if (!v) continue;
@@ -275,8 +279,9 @@
     filtered = data;
   };
 
-  const isDateField = (f) => f === "fecha_afiliacion" || f === "fecha_retiro" || f === "fecha_nacimiento";
-  const isNumericField = (f) => f === "edad" || f === "salario" || f === "documento" || f === "telefono";
+  const isDateField = (f) =>
+    f === "fecha_afiliacion" || f === "fecha_retiro" || f === "fecha_nacimiento";
+  const isNumericField = (f) => ["edad", "salario", "documento", "telefono"].includes(f);
 
   const applySort = () => {
     if (!sortState.field || !sortState.dir) return;
@@ -332,12 +337,10 @@
       btn.addEventListener("click", () => {
         const field = btn.getAttribute("data-sort-field");
         if (!field) return;
-        // ciclo: null -> asc -> desc -> null
         if (sortState.field !== field) sortState = { field, dir: "asc" };
         else if (sortState.dir === "asc") sortState.dir = "desc";
         else if (sortState.dir === "desc") sortState = { field: null, dir: null };
         else sortState = { field, dir: "asc" };
-
         setSortIcon(sortState.field, sortState.dir);
         recompute();
       });
@@ -363,34 +366,24 @@
       const selected = filtered.filter((r) => selectedIds.has(r.id));
       const rows = selected.length > 0 ? selected : filtered;
       const csv = toCSV(rows, columns);
-      const suffix = selected.length > 0 ? "seleccion" : "vista";
+      const suffix = selected.length > 0 ? "seleccion" : currentView;
       downloadText(`empleados_${suffix}_${Date.now()}.csv`, csv);
     });
   };
 
   const initNavAndLogout = () => {
-    goToEmployeesBtn?.addEventListener("click", () => (window.location.href = "/empleados"));
-    goToFormBtn?.addEventListener("click", () => (window.location.href = "/form"));
-    quickAddBtn?.addEventListener("click", () => (window.location.href = "/form"));
-    quickManageBtn?.addEventListener("click", () => (window.location.href = "/empleados"));
+    $("#goToEmployeesBtn")?.addEventListener("click", () => (window.location.href = "/empleados"));
+    $("#goToFormBtn")?.addEventListener("click", () => (window.location.href = "/form"));
+    $("#quickAddBtn")?.addEventListener("click", () => (window.location.href = "/form"));
+    $("#quickManageBtn")?.addEventListener("click", () => (window.location.href = "/empleados"));
 
-    const openLogout = () => {
-      if (!logoutModal) return;
-      logoutModal.classList.remove("hidden");
-      logoutModal.classList.add("flex");
-    };
-    const closeLogout = () => {
-      if (!logoutModal) return;
-      logoutModal.classList.add("hidden");
-      logoutModal.classList.remove("flex");
-    };
+    const openLogout = () => { if (!logoutModal) return; logoutModal.classList.remove("hidden"); logoutModal.classList.add("flex"); };
+    const closeLogout = () => { if (!logoutModal) return; logoutModal.classList.add("hidden"); logoutModal.classList.remove("flex"); };
 
     logoutBtn?.addEventListener("click", openLogout);
     logoutCancelBtn?.addEventListener("click", closeLogout);
     logoutConfirmBtn?.addEventListener("click", () => {
-      try {
-        localStorage.removeItem("usuarioRRHH");
-      } catch {}
+      try { localStorage.removeItem("usuarioRRHH"); } catch {}
       window.location.href = "/";
     });
 
@@ -409,14 +402,9 @@
   const updateScrollHints = () => {
     if (!scroller || !hintLeft || !hintRight) return;
     const max = scroller.scrollWidth - scroller.clientWidth;
-    if (max <= 0) {
-      hintLeft.classList.add("hidden");
-      hintRight.classList.add("hidden");
-      return;
-    }
+    if (max <= 0) { hintLeft.classList.add("hidden"); hintRight.classList.add("hidden"); return; }
     if (scroller.scrollLeft > 4) hintLeft.classList.remove("hidden");
     else hintLeft.classList.add("hidden");
-
     if (scroller.scrollLeft < max - 4) hintRight.classList.remove("hidden");
     else hintRight.classList.add("hidden");
   };
@@ -425,38 +413,91 @@
     if (!scroller) return;
     scroller.addEventListener("scroll", updateScrollHints, { passive: true });
     window.addEventListener("resize", debounce(updateScrollHints, 100));
-    btnLeft?.addEventListener("click", () => {
-      scroller.scrollBy({ left: -Math.max(200, scroller.clientWidth * 0.8), behavior: "smooth" });
-    });
-    btnRight?.addEventListener("click", () => {
-      scroller.scrollBy({ left: Math.max(200, scroller.clientWidth * 0.8), behavior: "smooth" });
-    });
-    // Primer cálculo
+    btnLeft?.addEventListener("click", () => scroller.scrollBy({ left: -Math.max(200, scroller.clientWidth * 0.8), behavior: "smooth" }));
+    btnRight?.addEventListener("click", () => scroller.scrollBy({ left: Math.max(200, scroller.clientWidth * 0.8), behavior: "smooth" }));
     setTimeout(updateScrollHints, 0);
   };
 
+  // ===== Conmutador Activos / Histórico (inyectado sin tocar HTML) =====
+  const injectViewSwitch = () => {
+    // Lo insertamos junto a los botones de export dentro del header de la tarjeta
+    const header = document.querySelector("section .flex.flex-wrap.items-center.justify-between");
+    if (!header) return;
+    // contenedor derecho actual
+    const right = header.querySelector("div.flex.flex-wrap.gap-2");
+    if (!right) return;
+
+    const wrap = document.createElement("div");
+    wrap.className = "flex items-center gap-2";
+
+    const switcher = document.createElement("div");
+    switcher.className = "inline-flex rounded-lg border border-sky-300 p-0.5 dark:border-slate-600";
+
+    const mkBtn = (key, label) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = label;
+      b.dataset.view = key;
+      b.className =
+        "px-3 py-1.5 text-xs font-medium rounded-md transition";
+      if (key === currentView) {
+        b.classList.add("bg-primary","text-white");
+      } else {
+        b.classList.add("text-slate-800","hover:bg-sky-50","dark:text-slate-100","dark:hover:bg-slate-800");
+      }
+      b.addEventListener("click", () => {
+        if (currentView === key) return;
+        currentView = key;
+        // resetea selección y filtros visuales
+        selectedIds = new Set();
+        // (mantenemos valores de filtros; aplican sobre la nueva vista)
+        recompute();
+        // actualizar estilos
+        [...switcher.children].forEach(ch => ch.className = "px-3 py-1.5 text-xs font-medium rounded-md transition text-slate-800 hover:bg-sky-50 dark:text-slate-100 dark:hover:bg-slate-800");
+        b.className = "px-3 py-1.5 text-xs font-medium rounded-md transition bg-primary text-white";
+      });
+      return b;
+    };
+
+    switcher.appendChild(mkBtn("activos", "Activos"));
+    switcher.appendChild(mkBtn("historico", "Histórico"));
+
+    wrap.appendChild(switcher);
+    // Insertar antes de los botones de export
+    right.parentNode.insertBefore(wrap, right);
+  };
+
   // ===== Carga de datos =====
-  const mapRow = (r) => ({
-    id: r.id,
-    nombre: r.nombre ?? "",
-    tipo_documento: r.tipo_documento ?? "",
-    documento: String(r.documento ?? ""),
-    fecha_nacimiento: r.fecha_nacimiento ?? null,
-    edad: calcEdad(r.fecha_nacimiento),
-    cargo: r.cargo ?? "",
-    fecha_afiliacion: r.fecha_afiliacion ?? null,
-    fecha_retiro: r.fecha_retiro ?? null,
-    salario: typeof r.salario === "number" ? r.salario : Number(r.salario) || null,
-    telefono: String(r.telefono ?? ""),
-    correo: r.correo ?? "",
-    direccion_residencia: r.direccion_residencia ?? "",
-    sexo: r.sexo ?? "",
-    EPS: r.EPS ?? "",
-    ARL: r.ARL ?? "",
-    fondo_pension: r.fondo_pension ?? "",
-    caja_compensacion: r.caja_compensacion ?? "",
-    info_adicional: r.info_adicional ?? "",
-  });
+  const mapRow = (r) => {
+    const activoCalc = ("activo" in r) ? Number(r.activo) : (r.fecha_retiro ? 0 : 1);
+    return {
+      id: r.id,
+      nombre: r.nombre ?? "",
+      tipo_documento: r.tipo_documento ?? "",
+      documento: String(r.documento ?? ""),
+      fecha_nacimiento: r.fecha_nacimiento ?? null,
+      edad: calcEdad(r.fecha_nacimiento),
+      cargo: r.cargo ?? "",
+      fecha_afiliacion: r.fecha_afiliacion ?? null,
+      fecha_retiro: r.fecha_retiro ?? null,
+      salario: typeof r.salario === "number" ? r.salario : Number(r.salario) || null,
+      telefono: String(r.telefono ?? ""),
+      correo: r.correo ?? "",
+      direccion_residencia: r.direccion_residencia ?? "",
+      sexo: r.sexo ?? "",
+      EPS: r.EPS ?? "",
+      ARL: r.ARL ?? "",
+      fondo_pension: r.fondo_pension ?? "",
+      caja_compensacion: r.caja_compensacion ?? "",
+      info_adicional: r.info_adicional ?? "",
+      activo: activoCalc, // 1/0
+    };
+  };
+
+  const splitViews = () => {
+    activeRows = allRows.filter((r) => Number(r.activo) === 1);
+    historicoRows = allRows.filter((r) => Number(r.activo) === 0 || r.fecha_retiro);
+  };
 
   const fetchData = async () => {
     setLoading(true, "Cargando información del panel...");
@@ -465,13 +506,19 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const list = await res.json();
       allRows = Array.isArray(list) ? list.map(mapRow) : [];
-      filtered = [...allRows];
+      splitViews();
       renderStats();
       setSortIcon(sortState.field, sortState.dir);
+      // por defecto mostramos activos
+      currentView = "activos";
+      applyFilters();
+      applySort();
       renderTable();
     } catch (err) {
       console.error("[dashboard] Error cargando datos:", err);
       allRows = [];
+      activeRows = [];
+      historicoRows = [];
       filtered = [];
       renderStats();
       renderTable();
@@ -484,6 +531,7 @@
   // ===== Init =====
   document.addEventListener("DOMContentLoaded", () => {
     renderGreeting();
+    injectViewSwitch();
     initFilters();
     initSorting();
     initSelectAll();
