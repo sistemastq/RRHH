@@ -26,8 +26,14 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 
     <!-- Fuentes -->
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+      rel="stylesheet"
+    />
 
     <!-- Estilos propios -->
     <link rel="stylesheet" href="/styles.css" />
@@ -35,9 +41,16 @@
 
   <body class="bg-background-light dark:bg-background-dark font-display">
     <!-- Modal de carga -->
-    <div id="loadingModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div class="flex flex-col items-center gap-3 rounded-2xl bg-white px-6 py-5 shadow-lg dark:bg-slate-900">
-        <div class="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+    <div
+      id="loadingModal"
+      class="fixed inset-0 z-40 hidden items-center justify-center bg-black/40 backdrop-blur-sm"
+    >
+      <div
+        class="flex flex-col items-center gap-3 rounded-2xl bg-white px-6 py-5 shadow-lg dark:bg-slate-900"
+      >
+        <div
+          class="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"
+        ></div>
         <p class="text-sm text-slate-900 dark:text-slate-100 text-center">
           Guardando la información del empleado...<br />
           Por favor espera unos segundos.
@@ -46,24 +59,48 @@
     </div>
 
     <!-- Modal de resultado -->
-    <div id="resultModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900">
+    <div
+      id="resultModal"
+      class="fixed inset-0 z-40 hidden items-center justify-center bg-black/40 backdrop-blur-sm"
+    >
+      <div
+        class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900"
+      >
         <div class="flex items-start gap-3">
-          <div id="resultIconWrapper" class="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
-            <span id="resultIcon" class="material-symbols-outlined text-2xl"> check_circle </span>
+          <div
+            id="resultIconWrapper"
+            class="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300"
+          >
+            <span id="resultIcon" class="material-symbols-outlined text-2xl">
+              check_circle
+            </span>
           </div>
           <div class="flex-1">
-            <h2 id="resultTitle" class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            <h2
+              id="resultTitle"
+              class="text-sm font-semibold text-slate-900 dark:text-slate-100"
+            >
               Empleado registrado
             </h2>
-            <p id="resultMessage" class="mt-2 text-sm text-slate-700 dark:text-slate-300">
+            <p
+              id="resultMessage"
+              class="mt-2 text-sm text-slate-700 dark:text-slate-300"
+            >
               La información del empleado se guardó correctamente.
             </p>
             <div class="mt-4 flex justify-end gap-2">
-              <button id="resultClose" type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
+              <button
+                id="resultClose"
+                type="button"
+                class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
                 Cerrar
               </button>
-              <button id="resultNew" type="button" class="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90">
+              <button
+                id="resultNew"
+                type="button"
+                class="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90"
+              >
                 Nuevo registro
               </button>
             </div>
@@ -72,24 +109,39 @@
       </div>
     </div>
 
-    <!-- Modal de confirmación (descartar cambios) -->
-    <div id="discardModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900">
+    <!-- Modal de confirmación (salir sin guardar) -->
+    <div
+      id="navConfirmModal"
+      class="fixed inset-0 z-40 hidden items-center justify-center bg-black/40 backdrop-blur-sm"
+    >
+      <div
+        class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900"
+      >
         <div class="mb-3 flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-primary">
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-primary"
+          >
             <span class="material-symbols-outlined text-[22px]"> warning </span>
           </div>
-          <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Descartar cambios</h2>
+          <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            Salir sin guardar
+          </h2>
         </div>
         <p class="mb-4 text-sm text-slate-600 dark:text-slate-300">
-          Tienes cambios sin guardar. Si sales ahora, se perderá la información ingresada.
+          Tienes cambios sin guardar. ¿Quieres volver al panel igualmente?
         </p>
         <div class="flex justify-end gap-2">
-          <button id="discardStayBtn" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">
-            Seguir en el formulario
+          <button
+            id="navConfirmCancelBtn"
+            class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            Seguir aquí
           </button>
-          <button id="discardConfirmBtn" class="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90">
-            Descartar y volver
+          <button
+            id="navConfirmContinueBtn"
+            class="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90"
+          >
+            Sí, volver
           </button>
         </div>
       </div>
@@ -98,16 +150,23 @@
     <!-- Layout principal -->
     <div class="flex min-h-screen flex-col overflow-x-hidden">
       <!-- App bar -->
-      <header class="sticky top-0 z-10 flex h-14 items-center border-b border-slate-200 bg-background-light/80 px-4 backdrop-blur-sm dark:border-slate-800 dark:bg-background-dark/80">
+      <header
+        class="sticky top-0 z-10 flex h-14 items-center border-b border-slate-200 bg-background-light/80 px-4 backdrop-blur-sm dark:border-slate-800 dark:bg-background-dark/80"
+      >
         <button
-          type="button"
           id="backBtn"
+          type="button"
           class="flex h-8 w-8 items-center justify-center rounded-full text-slate-600 hover:bg-slate-200/70 dark:text-slate-300 dark:hover:bg-slate-800/80"
-          title="Volver al panel"
+          aria-label="Volver al panel"
         >
-          <span class="material-symbols-outlined text-xl"> arrow_back_ios_new </span>
+          <span class="material-symbols-outlined text-xl"
+            >arrow_back_ios_new</span
+          >
         </button>
-        <h1 class="flex-1 text-center text-base font-semibold text-slate-900 dark:text-slate-50">
+
+        <h1
+          class="flex-1 text-center text-base font-semibold text-slate-900 dark:text-slate-50"
+        >
           Nuevo Empleado
         </h1>
       </header>
@@ -115,14 +174,23 @@
       <main class="flex-1 px-4 py-6">
         <form id="formularioEmpleado" class="space-y-6" novalidate>
           <!-- Datos personales -->
-          <section class="space-y-4 rounded-xl bg-white p-4 shadow-sm dark:bg-slate-900/70">
-            <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
-              <span class="material-symbols-outlined text-primary"> badge </span>
+          <section
+            class="space-y-4 rounded-xl bg-white p-4 shadow-sm dark:bg-slate-900/70"
+          >
+            <h2
+              class="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100"
+            >
+              <span class="material-symbols-outlined text-primary">
+                badge
+              </span>
               Datos personales
             </h2>
 
             <div>
-              <label for="nombre" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200">
+              <label
+                for="nombre"
+                class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+              >
                 Nombre completo <span class="text-red-500">*</span>
               </label>
               <input
@@ -136,7 +204,10 @@
 
             <div class="grid gap-4 md:grid-cols-2">
               <div>
-                <label for="tipo_documento" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200">
+                <label
+                  for="tipo_documento"
+                  class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+                >
                   Tipo de documento <span class="text-red-500">*</span>
                 </label>
                 <div class="relative">
@@ -153,14 +224,19 @@
                     <option value="PA">Pasaporte</option>
                     <option value="NIT">NIT</option>
                   </select>
-                  <span class="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
+                  <span
+                    class="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400"
+                  >
                     expand_more
                   </span>
                 </div>
               </div>
 
               <div>
-                <label for="documento" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200">
+                <label
+                  for="documento"
+                  class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+                >
                   Número de documento <span class="text-red-500">*</span>
                 </label>
                 <input
@@ -176,7 +252,10 @@
 
             <div class="grid gap-4 md:grid-cols-2">
               <div>
-                <label for="fecha_nacimiento" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200">
+                <label
+                  for="fecha_nacimiento"
+                  class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+                >
                   Fecha de nacimiento <span class="text-red-500">*</span>
                 </label>
                 <input
@@ -189,7 +268,10 @@
               </div>
 
               <div>
-                <label for="sexo" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200">
+                <label
+                  for="sexo"
+                  class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+                >
                   Sexo <span class="text-red-500">*</span>
                 </label>
                 <div class="relative">
@@ -204,7 +286,9 @@
                     <option value="M">Masculino</option>
                     <option value="O">Otro / Prefiere no decir</option>
                   </select>
-                  <span class="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
+                  <span
+                    class="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400"
+                  >
                     expand_more
                   </span>
                 </div>
@@ -213,14 +297,21 @@
           </section>
 
           <!-- Información laboral -->
-          <section class="space-y-4 rounded-xl bg-white p-4 shadow-sm dark:bg-slate-900/70">
-            <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <section
+            class="space-y-4 rounded-xl bg-white p-4 shadow-sm dark:bg-slate-900/70"
+          >
+            <h2
+              class="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100"
+            >
               <span class="material-symbols-outlined text-primary"> work </span>
               Información laboral
             </h2>
 
             <div>
-              <label for="cargo" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200">
+              <label
+                for="cargo"
+                class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+              >
                 Cargo <span class="text-red-500">*</span>
               </label>
               <input
@@ -234,7 +325,10 @@
 
             <div class="grid gap-4 md:grid-cols-2">
               <div>
-                <label for="fecha_afiliacion" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200">
+                <label
+                  for="fecha_afiliacion"
+                  class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+                >
                   Fecha de afiliación <span class="text-red-500">*</span>
                 </label>
                 <input
@@ -247,7 +341,10 @@
               </div>
 
               <div>
-                <label for="fecha_retiro" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200">
+                <label
+                  for="fecha_retiro"
+                  class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+                >
                   Fecha de retiro (opcional)
                 </label>
                 <input
@@ -261,7 +358,10 @@
 
             <div class="grid gap-4 md:grid-cols-2">
               <div>
-                <label for="salario" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200">
+                <label
+                  for="salario"
+                  class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+                >
                   Salario (COP) <span class="text-red-500">*</span>
                 </label>
                 <input
@@ -277,7 +377,10 @@
               </div>
 
               <div>
-                <label for="telefono" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200">
+                <label
+                  for="telefono"
+                  class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+                >
                   Teléfono <span class="text-red-500">*</span>
                 </label>
                 <input
@@ -293,15 +396,26 @@
           </section>
 
           <!-- Seguridad social -->
-          <section class="space-y-4 rounded-xl bg-white p-4 shadow-sm dark:bg-slate-900/70">
-            <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
-              <span class="material-symbols-outlined text-primary"> health_and_safety </span>
+          <section
+            class="space-y-4 rounded-xl bg-white p-4 shadow-sm dark:bg-slate-900/70"
+          >
+            <h2
+              class="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100"
+            >
+              <span class="material-symbols-outlined text-primary">
+                health_and_safety
+              </span>
               Seguridad social
             </h2>
 
             <div class="grid gap-4 md:grid-cols-2">
               <div>
-                <label for="EPS" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"> EPS </label>
+                <label
+                  for="EPS"
+                  class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+                >
+                  EPS
+                </label>
                 <input
                   id="EPS"
                   name="EPS"
@@ -311,7 +425,12 @@
               </div>
 
               <div>
-                <label for="ARL" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"> ARL </label>
+                <label
+                  for="ARL"
+                  class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+                >
+                  ARL
+                </label>
                 <input
                   id="ARL"
                   name="ARL"
@@ -323,7 +442,12 @@
 
             <div class="grid gap-4 md:grid-cols-2">
               <div>
-                <label for="fondo_pension" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"> Fondo de pensión </label>
+                <label
+                  for="fondo_pension"
+                  class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+                >
+                  Fondo de pensión
+                </label>
                 <input
                   id="fondo_pension"
                   name="fondo_pension"
@@ -333,7 +457,12 @@
               </div>
 
               <div>
-                <label for="caja_compensacion" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"> Caja de compensación </label>
+                <label
+                  for="caja_compensacion"
+                  class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+                >
+                  Caja de compensación
+                </label>
                 <input
                   id="caja_compensacion"
                   name="caja_compensacion"
@@ -345,14 +474,25 @@
           </section>
 
           <!-- Contacto + info adicional -->
-          <section class="space-y-4 rounded-xl bg-white p-4 shadow-sm dark:bg-slate-900/70">
-            <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
-              <span class="material-symbols-outlined text-primary"> contact_mail </span>
+          <section
+            class="space-y-4 rounded-xl bg-white p-4 shadow-sm dark:bg-slate-900/70"
+          >
+            <h2
+              class="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100"
+            >
+              <span class="material-symbols-outlined text-primary">
+                contact_mail
+              </span>
               Contacto e información adicional
             </h2>
 
             <div>
-              <label for="correo" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"> Correo electrónico </label>
+              <label
+                for="correo"
+                class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+              >
+                Correo electrónico
+              </label>
               <input
                 id="correo"
                 name="correo"
@@ -363,7 +503,12 @@
             </div>
 
             <div>
-              <label for="direccion_residencia" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"> Dirección de residencia </label>
+              <label
+                for="direccion_residencia"
+                class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+              >
+                Dirección de residencia
+              </label>
               <input
                 id="direccion_residencia"
                 name="direccion_residencia"
@@ -373,7 +518,10 @@
             </div>
 
             <div>
-              <label for="info_adicional" class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200">
+              <label
+                for="info_adicional"
+                class="mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200"
+              >
                 Información adicional <span class="text-red-500">*</span>
               </label>
               <textarea
@@ -389,7 +537,9 @@
         </form>
       </main>
 
-      <footer class="sticky bottom-0 bg-background-light px-4 pb-5 pt-3 dark:bg-background-dark">
+      <footer
+        class="sticky bottom-0 bg-background-light px-4 pb-5 pt-3 dark:bg-background-dark"
+      >
         <div class="flex w-full gap-2">
           <button
             id="cancelBtn"
@@ -411,67 +561,7 @@
       </footer>
     </div>
 
-    <!-- Lógica extra para volver/cancelar -->
-    <script>
-      (function () {
-        const form = document.getElementById("formularioEmpleado");
-        const backBtn = document.getElementById("backBtn");
-        const cancelBtn = document.getElementById("cancelBtn");
-
-        const discardModal = document.getElementById("discardModal");
-        const discardStayBtn = document.getElementById("discardStayBtn");
-        const discardConfirmBtn = document.getElementById("discardConfirmBtn");
-
-        let dirty = false;
-
-        // Marca el formulario como "sucio" cuando haya cambios
-        form.addEventListener("input", () => (dirty = true), { passive: true });
-        form.addEventListener("change", () => (dirty = true), { passive: true });
-
-        function openDiscardModal() {
-          discardModal.classList.remove("hidden");
-          discardModal.classList.add("flex");
-        }
-        function closeDiscardModal() {
-          discardModal.classList.add("hidden");
-          discardModal.classList.remove("flex");
-        }
-        function goDashboard() {
-          window.location.href = "/dashboard";
-        }
-
-        // Botón Volver: si hay cambios, pregunta; si no, navega directo
-        if (backBtn) {
-          backBtn.addEventListener("click", () => {
-            if (dirty) openDiscardModal();
-            else goDashboard();
-          });
-        }
-
-        // Botón Cancelar: mismo comportamiento que Volver
-        if (cancelBtn) {
-          cancelBtn.addEventListener("click", () => {
-            if (dirty) openDiscardModal();
-            else goDashboard();
-          });
-        }
-
-        if (discardStayBtn) discardStayBtn.addEventListener("click", closeDiscardModal);
-        if (discardConfirmBtn) {
-          discardConfirmBtn.addEventListener("click", () => {
-            // Descarta cambios y vuelve al dashboard
-            dirty = false;
-            goDashboard();
-          });
-        }
-
-        // Cerrar modal con ESC
-        document.addEventListener("keydown", (e) => {
-          if (e.key === "Escape") closeDiscardModal();
-        });
-      })();
-    </script>
-
+    <!-- JS principal (maneja volver/cancelar y confirmación) -->
     <script src="/form.js"></script>
   </body>
 </html>

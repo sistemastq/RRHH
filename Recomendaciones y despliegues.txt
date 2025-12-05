@@ -1,0 +1,45 @@
+Archivos del front (/public/*.html, /public/*.js, /public/styles.css)
+— Se reflejan al recargar el navegador. Si no los ves, haz un hard refresh (Ctrl+F5 / Cmd+Shift+R). No hace falta reiniciar PM2.
+
+Código del backend (/src/*.js, server.js)
+— Necesitas recargar el proceso:
+
+pm2 reload rrhh
+
+
+(si cambiaste variables de entorno, usa --update-env).
+
+Dependencias (package.json / package-lock.json)
+— Instala y recarga:
+
+npm ci --omit=dev
+pm2 reload rrhh
+
+
+Variables en .env
+— Guarda el archivo y reinicia con env nuevo:
+
+pm2 restart rrhh --update-env
+
+
+Flujo típico de despliegue con Git
+
+cd /var/www/rrhh/RRHH
+git pull --rebase
+npm ci --omit=dev   # solo si cambiaste deps
+pm2 reload rrhh --update-env
+
+¿Quieres que se apliquen “solos”?
+
+Puedes activar watch en PM2 para que reinicie cuando cambie el código (cómodo, pero no ideal en producción):
+
+pm2 restart rrhh --watch --ignore-watch="node_modules logs"
+
+
+Mejor: un mini script o GitHub Action que haga ssh al servidor, git pull y pm2 reload.
+
+Notas rápidas
+
+Si el navegador “se queda” con versiones antiguas, es caché. El hard refresh lo soluciona; en caso extremo, borra caché o abre en ventana privada.
+
+Cambiar puertos/Tailscale no es necesario para ver cambios; mientras PM2 esté online y escuchando, basta con recargar / reiniciar como arriba.

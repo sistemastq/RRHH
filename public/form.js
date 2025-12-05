@@ -1,5 +1,4 @@
 // public/form.js
-
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("formularioEmpleado");
   const loadingModal = document.getElementById("loadingModal");
@@ -14,31 +13,68 @@ document.addEventListener("DOMContentLoaded", () => {
   const resultNew = document.getElementById("resultNew");
   const nombreInput = document.getElementById("nombre");
 
-  const setLoading = (isLoading) => {
-    if (!submitButton) return;
-    submitButton.disabled = isLoading;
-    submitButton.textContent = isLoading
-      ? "Guardando..."
-      : "Guardar empleado";
-  };
+  // NUEVO: navegación segura (volver/cancelar) sin inline JS
+  const backBtn = document.getElementById("backBtn");
+  const cancelBtn = document.getElementById("cancelBtn");
+  const navConfirmModal = document.getElementById("navConfirmModal");
+  const navConfirmCancelBtn = document.getElementById("navConfirmCancelBtn");
+  const navConfirmContinueBtn = document.getElementById("navConfirmContinueBtn");
 
-  const showLoadingModal = (show) => {
-    if (!loadingModal) return;
+  const showEl = (el, show) => {
+    if (!el) return;
     if (show) {
-      loadingModal.classList.remove("hidden");
-      loadingModal.classList.add("flex");
+      el.classList.remove("hidden");
+      el.classList.add("flex");
     } else {
-      loadingModal.classList.add("hidden");
-      loadingModal.classList.remove("flex");
+      el.classList.add("hidden");
+      el.classList.remove("flex");
     }
   };
 
+  const goDashboard = () => (window.location.href = "/dashboard");
+
+  let isDirty = false;
+  // Marca el formulario como "modificado" ante cualquier input/cambio
+  if (form) {
+    form.addEventListener("input", () => (isDirty = true), { passive: true });
+    form.addEventListener("change", () => (isDirty = true), { passive: true });
+  }
+
+  // Si el usuario intenta recargar/cerrar con cambios, avisa el navegador
+  window.addEventListener("beforeunload", (e) => {
+    if (!isDirty) return;
+    e.preventDefault();
+    e.returnValue = "";
+  });
+
+  const handleNavigateAway = () => {
+    if (isDirty && navConfirmModal) {
+      showEl(navConfirmModal, true);
+    } else {
+      goDashboard();
+    }
+  };
+
+  backBtn?.addEventListener("click", handleNavigateAway);
+  cancelBtn?.addEventListener("click", handleNavigateAway);
+  navConfirmCancelBtn?.addEventListener("click", () => showEl(navConfirmModal, false));
+  navConfirmContinueBtn?.addEventListener("click", () => {
+    showEl(navConfirmModal, false);
+    goDashboard();
+  });
+
+  const setLoading = (isLoading) => {
+    if (!submitButton) return;
+    submitButton.disabled = isLoading;
+    submitButton.textContent = isLoading ? "Guardando..." : "Guardar empleado";
+  };
+
+  const showLoadingModal = (show) => showEl(loadingModal, show);
+
   const openResultModal = (type, title, message) => {
     if (!resultModal) return;
-
     // Reset estilo
-    resultIconWrapper.className =
-      "flex h-10 w-10 items-center justify-center rounded-full";
+    resultIconWrapper.className = "flex h-10 w-10 items-center justify-center rounded-full";
     if (type === "error") {
       resultIconWrapper.classList.add(
         "bg-red-100",
@@ -59,22 +95,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     resultTitle.textContent = title;
     resultMessage.textContent = message;
-
-    resultModal.classList.remove("hidden");
-    resultModal.classList.add("flex");
+    showEl(resultModal, true);
   };
 
-  const closeResultModal = () => {
-    if (!resultModal) return;
-    resultModal.classList.add("hidden");
-    resultModal.classList.remove("flex");
-  };
+  const closeResultModal = () => showEl(resultModal, false);
 
-  resultClose?.addEventListener("click", () => closeResultModal());
-
+  resultClose?.addEventListener("click", closeResultModal);
   resultNew?.addEventListener("click", () => {
     closeResultModal();
     form?.reset();
+    isDirty = false; // resetea estado sucio
     nombreInput?.focus();
   });
 
@@ -97,13 +127,11 @@ document.addEventListener("DOMContentLoaded", () => {
         salario: fd.get("salario")?.toString().trim(),
         telefono: fd.get("telefono")?.toString().trim(),
         correo: fd.get("correo")?.toString().trim() || "",
-        direccion_residencia:
-          fd.get("direccion_residencia")?.toString().trim() || "",
+        direccion_residencia: fd.get("direccion_residencia")?.toString().trim() || "",
         EPS: fd.get("EPS")?.toString().trim() || "",
         ARL: fd.get("ARL")?.toString().trim() || "",
         fondo_pension: fd.get("fondo_pension")?.toString().trim() || "",
-        caja_compensacion:
-          fd.get("caja_compensacion")?.toString().trim() || "",
+        caja_compensacion: fd.get("caja_compensacion")?.toString().trim() || "",
         info_adicional: fd.get("info_adicional")?.toString().trim(),
       };
 
@@ -120,10 +148,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "info_adicional",
       ];
 
-      const faltantes = obligatorios.filter((campo) =>
-        isEmpty(payload[campo])
-      );
-
+      const faltantes = obligatorios.filter((campo) => isEmpty(payload[campo]));
       if (faltantes.length > 0) {
         openResultModal(
           "error",
@@ -149,8 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
           openResultModal(
             "error",
             "No se pudo guardar el empleado",
-            data?.error ||
-              "Ocurrió un problema al guardar la información en la base de datos."
+            data?.error || "Ocurrió un problema al guardar la información en la base de datos."
           );
           return;
         }
@@ -161,6 +185,7 @@ document.addEventListener("DOMContentLoaded", () => {
           "La información fue almacenada en el sistema de RRHH."
         );
         form.reset();
+        isDirty = false; // ya está guardado
         nombreInput?.focus();
       } catch (err) {
         console.error(err);
