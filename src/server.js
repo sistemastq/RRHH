@@ -1,384 +1,375 @@
 // src/server.js
-require('dotenv').config();
-const express = require('express');
-const path = require('path');
-const cors = require('cors');
-const supabase = require('./supabase'); // cliente de Supabase ya configurado
+// reemplaza tu require('dotenv').config();
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
+const express = require("express");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
+const { rateLimit } = require("express-rate-limit");
+const hpp = require("hpp");
+const compression = require("compression");
+const pinoHttp = require("pino-http")({ autoLogging: true });
+const jwt = require("jsonwebtoken");
+const { z } = require("zod");
+
+const supabase = require("./supabase"); // tu cliente Supabase
+
+// --- App & Paths ---
 const app = express();
 const PORT = process.env.PORT || 3000;
+const publicPath = path.join(__dirname, "..", "public");
 
-// Ruta a la carpeta "public" (está fuera de /src)
-const publicPath = path.join(__dirname, '..', 'public');
+// --- Seguridad base ---
+app.disable("x-powered-by");
+// al inicio de server.js (después de crear app)
+app.set("trust proxy", 1);
+app.use(pinoHttp);
+
+// usa tu dominio real
+app.use(
+  cors({
+    origin: process.env.APP_ORIGIN || "https://rrhh.midominio.com",
+    credentials: true,
+  })
+);
+
+// CSP + cabeceras de seguridad
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        "default-src": ["'self'"],
+        "script-src": ["'self'", "https://cdn.tailwindcss.com"],
+        "style-src": [
+          "'self'",
+          "'unsafe-inline'",
+          "https://fonts.googleapis.com",
+        ],
+        "font-src": ["'self'", "https://fonts.gstatic.com"],
+        "img-src": ["'self'", "data:", "https://ui-avatars.com"],
+        "connect-src": ["'self'", process.env.SUPABASE_URL], // <- importante
+      },
+    },
+  })
+);
 
 // Middlewares globales
-app.use(cors());
-app.use(express.json());
+app.use(compression());
+app.use(hpp());
+app.use(express.json({ limit: "100kb" }));
+app.use(cookieParser(process.env.COOKIE_SECRET));
 
-// Archivos estáticos (index.html, *.js, styles.css, etc.)
+// CORS (si sirves el front desde el mismo servidor, podrías incluso omitir esto)
+app.use(
+  cors({
+    origin: process.env.APP_ORIGIN || "http://localhost:3000",
+    credentials: true,
+  })
+);
+
+// Archivos estáticos
 app.use(express.static(publicPath));
 
-/**
- * API LOGIN → tabla public."Usuario"
- * Campos usados:
- *  - correo
- *  - contrasena (sin hash en este ejemplo)
- */
-app.post('/api/login', async (req, res) => {
-  const { email, password } = req.body || {};
+// --- Rate limits ---
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 }); // 10 intentos/15min
+const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 120 }); // 120 req/min
+app.use("/api/login", loginLimiter);
+app.use("/api/", apiLimiter);
 
+// --- Helpers de sesión ---
+function issueSession(res, user) {
+  const token = jwt.sign(
+    { sub: user.id, correo: user.correo, role: "rrhh" },
+    process.env.JWT_SECRET,
+    { expiresIn: "8h" }
+  );
+  const isProd = process.env.NODE_ENV === "production";
+  res.cookie("session", token, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "lax",
+    maxAge: 8 * 60 * 60 * 1000,
+  });
+}
+
+function requireAuth(req, res, next) {
+  try {
+    const token = req.cookies?.session;
+    if (!token) return res.status(401).json({ error: "No autorizado" });
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    return res.status(401).json({ error: "Sesión inválida" });
+  }
+}
+
+// Para páginas HTML protegidas (redirige al login si no hay cookie válida)
+function guardPage(req, res, next) {
+  try {
+    const token = req.cookies?.session;
+    if (!token) return res.redirect("/");
+    jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    return res.redirect("/");
+  }
+}
+
+// --- Validación (Zod) ---
+const formSchema = z.object({
+  nombre: z.string().min(1).max(200),
+  documento: z.string().min(4).max(30),
+  fecha_afiliacion: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  cargo: z.string().min(1).max(120),
+  tipo_documento: z.string().min(1).max(10),
+  info_adicional: z.string().min(1),
+  EPS: z.string().optional().default(""),
+  ARL: z.string().optional().default(""),
+  fondo_pension: z.string().optional().default(""),
+  salario: z.number().nonnegative(),
+  telefono: z.string().min(7).max(20),
+  correo: z.string().email().optional().or(z.literal("")),
+  direccion_residencia: z.string().optional().default(""),
+  fecha_retiro: z.string().nullable().optional(),
+  fecha_nacimiento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  caja_compensacion: z.string().optional().default(""),
+  sexo: z.string().min(1),
+});
+
+// =====================
+// ======  API  ========
+// =====================
+
+/**
+ * LOGIN → POST /api/login
+ * Tabla public."Usuario" (con contraseña en texto plano en tu BD actual).
+ * Emite cookie httpOnly con JWT.
+ */
+app.post("/api/login", async (req, res) => {
+  const { email, password } = req.body || {};
   if (!email || !password) {
     return res
       .status(400)
-      .json({ error: 'Correo y contraseña son obligatorios.' });
+      .json({ error: "Correo y contraseña son obligatorios." });
   }
 
   try {
     const { data, error } = await supabase
-      .from('Usuario')
-      .select('id, nombre, correo')
-      .eq('correo', email)
-      .eq('contrasena', password) // ⚠️ en producción: hasheado
+      .from("Usuario")
+      .select("id, nombre, correo, contrasena")
+      .eq("correo", email)
       .maybeSingle();
 
     if (error) {
-      console.error('Error Supabase /api/login:', error);
-      return res.status(500).json({
-        error: 'Error al consultar el servicio de autenticación.',
-      });
+      req.log.error({ err: error }, "Supabase error /api/login");
+      return res
+        .status(500)
+        .json({ error: "Error al consultar autenticación." });
     }
-
-    if (!data) {
+    if (!data || data.contrasena !== password) {
       return res
         .status(401)
-        .json({ error: 'Correo o contraseña incorrectos.' });
+        .json({ error: "Correo o contraseña incorrectos." });
     }
 
+    // ok → emitir cookie y devolver user (sin contraseña)
+    issueSession(res, data);
+    const { contrasena, ...userSafe } = data;
     return res.json({
-      user: data,
+      user: userSafe,
       message: `Bienvenido/a, ${data.nombre}`,
     });
   } catch (err) {
-    console.error('Error inesperado /api/login:', err);
-    return res.status(500).json({
-      error: 'Error interno del servidor. Intenta de nuevo más tarde.',
-    });
+    req.log.error({ err }, "Unexpected /api/login");
+    return res.status(500).json({ error: "Error interno." });
   }
 });
 
-/**
- * API FORMULARIOS (INSERT) → POST /api/formularios
- * Tabla public.formularios
- */
-app.post('/api/formularios', async (req, res) => {
+// LOGOUT → limpia cookie
+app.post("/api/logout", (req, res) => {
+  res.clearCookie("session", { httpOnly: true, sameSite: "lax" });
+  return res.status(204).send();
+});
+
+// FORMULARIOS: INSERT
+app.post("/api/formularios", requireAuth, async (req, res) => {
+  const parsed = formSchema.safeParse(req.body);
+  if (!parsed.success)
+    return res.status(400).json({ error: "Datos inválidos" });
+
   try {
-    const {
-      nombre,
-      documento,
-      fecha_afiliacion,
-      cargo,
-      tipo_documento,
-      info_adicional,
-      ARL,
-      EPS,
-      fondo_pension,
-      salario,
-      telefono,
-      correo,
-      direccion_residencia,
-      fecha_retiro,
-      fecha_nacimiento,
-      caja_compensacion,
-      sexo,
-    } = req.body || {};
-
-    // Validación básica de obligatorios
-    if (
-      !nombre ||
-      !documento ||
-      !fecha_afiliacion ||
-      !cargo ||
-      !tipo_documento ||
-      !info_adicional ||
-      !fecha_nacimiento ||
-      !salario ||
-      !telefono ||
-      !sexo
-    ) {
-      return res.status(400).json({
-        error:
-          'Faltan campos obligatorios. Verifica nombre, documento, fechas, cargo, salario, teléfono, sexo e información adicional.',
-      });
-    }
-
     const payload = {
-      nombre,
-      documento: Number(documento),
-      fecha_afiliacion, // 'YYYY-MM-DD'
-      cargo,
-      tipo_documento,
-      info_adicional,
-      ARL: ARL ?? '',
-      EPS: EPS ?? '',
-      fondo_pension: fondo_pension ?? '',
-      salario: Number(salario) || 0,
-      telefono: Number(telefono) || 0,
-      correo: correo ?? '',
-      direccion_residencia: direccion_residencia ?? '',
-      fecha_nacimiento, // 'YYYY-MM-DD'
-      caja_compensacion: caja_compensacion ?? '',
-      sexo: sexo ?? '',
-      // alerta_retiro_enviada queda con el default false
+      ...parsed.data,
+      documento: Number(parsed.data.documento),
+      salario: Number(parsed.data.salario) || 0,
+      telefono: Number(parsed.data.telefono) || 0,
     };
 
-    if (fecha_retiro) {
-      payload.fecha_retiro = fecha_retiro; // 'YYYY-MM-DD'
-    }
-
     const { data, error } = await supabase
-      .from('formularios')
+      .from("formularios")
       .insert([payload])
       .select()
       .single();
 
     if (error) {
-      console.error('Error insertando en formularios:', error);
-      return res.status(500).json({
-        error: 'No se pudo guardar el formulario en la base de datos.',
-      });
-    }
-
-    return res.status(201).json({ data });
-  } catch (err) {
-    console.error('Error inesperado /api/formularios POST:', err);
-    return res.status(500).json({
-      error: 'Error interno del servidor al guardar el formulario.',
-    });
-  }
-});
-
-/**
- * API FORMULARIOS (LISTAR) → GET /api/formularios
- * Se usa en el dashboard y en la página de gestión.
- */
-app.get('/api/formularios', async (req, res) => {
-  try {
-    const { data, error } = await supabase.from('formularios').select('*');
-
-    if (error) {
-      console.error('Error obteniendo formularios:', error);
+      req.log.error({ err: error }, "Supabase error insert /formularios");
       return res
         .status(500)
-        .json({ error: 'No se pudieron obtener los formularios.' });
+        .json({ error: "No se pudo guardar el formulario." });
     }
-
-    return res.json(data || []);
+    return res.status(201).json({ data });
   } catch (err) {
-    console.error('Error inesperado /api/formularios GET:', err);
-    return res.status(500).json({
-      error: 'Error interno del servidor al obtener formularios.',
-    });
+    req.log.error({ err }, "Unexpected POST /formularios");
+    return res.status(500).json({ error: "Error interno." });
   }
 });
 
-/**
- * API FORMULARIOS (OBTENER UNO) → GET /api/formularios/:id
- * Se usa en el modal "Ver" de la página de gestión.
- */
-app.get('/api/formularios/:id', async (req, res) => {
-  const id = Number(req.params.id);
-  if (!id) {
-    return res.status(400).json({ error: 'ID inválido.' });
+// FORMULARIOS: LISTAR
+app.get("/api/formularios", requireAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabase.from("formularios").select("*");
+    if (error) {
+      req.log.error({ err: error }, "Supabase error list /formularios");
+      return res
+        .status(500)
+        .json({ error: "No se pudieron obtener los formularios." });
+    }
+    return res.json(data || []);
+  } catch (err) {
+    req.log.error({ err }, "Unexpected GET /formularios");
+    return res.status(500).json({ error: "Error interno." });
   }
+});
+
+// FORMULARIOS: OBTENER UNO
+app.get("/api/formularios/:id", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) return res.status(400).json({ error: "ID inválido" });
 
   try {
     const { data, error } = await supabase
-      .from('formularios')
-      .select('*')
-      .eq('id', id)
+      .from("formularios")
+      .select("*")
+      .eq("id", id)
       .maybeSingle();
 
     if (error) {
-      console.error('Error al obtener formulario por id:', error);
-      return res
-        .status(500)
-        .json({ error: 'No se pudo obtener el formulario.' });
+      req.log.error({ err: error }, "Supabase error get /formularios/:id");
+      return res.status(500).json({ error: "No se pudo obtener el registro." });
     }
-
-    if (!data) {
-      return res.status(404).json({ error: 'Empleado no encontrado.' });
-    }
+    if (!data)
+      return res.status(404).json({ error: "Empleado no encontrado." });
 
     return res.json(data);
   } catch (err) {
-    console.error('Error inesperado GET /api/formularios/:id:', err);
-    return res
-      .status(500)
-      .json({ error: 'Error interno del servidor al buscar empleado.' });
+    req.log.error({ err }, "Unexpected GET /formularios/:id");
+    return res.status(500).json({ error: "Error interno." });
   }
 });
 
-/**
- * API FORMULARIOS (ACTUALIZAR) → PUT /api/formularios/:id
- * Se usa al editar un empleado desde employees.html
- */
-app.put('/api/formularios/:id', async (req, res) => {
+// FORMULARIOS: ACTUALIZAR
+app.put("/api/formularios/:id", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
-  if (!id) {
-    return res.status(400).json({ error: 'ID inválido.' });
-  }
+  if (!id) return res.status(400).json({ error: "ID inválido" });
+
+  const parsed = formSchema.safeParse(req.body);
+  if (!parsed.success)
+    return res.status(400).json({ error: "Datos inválidos" });
 
   try {
-    const {
-      nombre,
-      documento,
-      fecha_afiliacion,
-      cargo,
-      tipo_documento,
-      info_adicional,
-      ARL,
-      EPS,
-      fondo_pension,
-      salario,
-      telefono,
-      correo,
-      direccion_residencia,
-      fecha_retiro,
-      fecha_nacimiento,
-      caja_compensacion,
-      sexo,
-    } = req.body || {};
-
-    if (
-      !nombre ||
-      !documento ||
-      !fecha_afiliacion ||
-      !cargo ||
-      !tipo_documento ||
-      !info_adicional ||
-      !fecha_nacimiento ||
-      !salario ||
-      !telefono ||
-      !sexo
-    ) {
-      return res.status(400).json({
-        error:
-          'Faltan campos obligatorios al actualizar. Verifica nombre, documento, fechas, cargo, salario, teléfono, sexo e información adicional.',
-      });
-    }
-
     const payload = {
-      nombre,
-      documento: Number(documento),
-      fecha_afiliacion,
-      cargo,
-      tipo_documento,
-      info_adicional,
-      ARL: ARL ?? '',
-      EPS: EPS ?? '',
-      fondo_pension: fondo_pension ?? '',
-      salario: Number(salario) || 0,
-      telefono: Number(telefono) || 0,
-      correo: correo ?? '',
-      direccion_residencia: direccion_residencia ?? '',
-      fecha_nacimiento,
-      caja_compensacion: caja_compensacion ?? '',
-      sexo: sexo ?? '',
+      ...parsed.data,
+      documento: Number(parsed.data.documento),
+      salario: Number(parsed.data.salario) || 0,
+      telefono: Number(parsed.data.telefono) || 0,
     };
 
-    if (fecha_retiro !== undefined) {
-      payload.fecha_retiro = fecha_retiro || null;
+    // permitir null para fecha_retiro si viene vacío
+    if (
+      Object.prototype.hasOwnProperty.call(req.body, "fecha_retiro") &&
+      !parsed.data.fecha_retiro
+    ) {
+      payload.fecha_retiro = null;
     }
 
     const { data, error } = await supabase
-      .from('formularios')
+      .from("formularios")
       .update(payload)
-      .eq('id', id)
+      .eq("id", id)
       .select()
       .single();
 
     if (error) {
-      console.error('Error actualizando formulario:', error);
+      req.log.error({ err: error }, "Supabase error update /formularios/:id");
       return res
         .status(500)
-        .json({ error: 'No se pudo actualizar el formulario.' });
+        .json({ error: "No se pudo actualizar el registro." });
     }
-
-    if (!data) {
-      return res.status(404).json({ error: 'Empleado no encontrado.' });
-    }
+    if (!data)
+      return res.status(404).json({ error: "Empleado no encontrado." });
 
     return res.json({ data });
   } catch (err) {
-    console.error('Error inesperado PUT /api/formularios/:id:', err);
-    return res
-      .status(500)
-      .json({ error: 'Error interno del servidor al actualizar empleado.' });
+    req.log.error({ err }, "Unexpected PUT /formularios/:id");
+    return res.status(500).json({ error: "Error interno." });
   }
 });
 
-/**
- * API FORMULARIOS (ELIMINAR) → DELETE /api/formularios/:id
- * Se usa en la página de gestión para eliminar un empleado.
- */
-app.delete('/api/formularios/:id', async (req, res) => {
+// FORMULARIOS: ELIMINAR
+app.delete("/api/formularios/:id", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
-  if (!id) {
-    return res.status(400).json({ error: 'ID inválido.' });
-  }
+  if (!id) return res.status(400).json({ error: "ID inválido" });
 
   try {
-    const { error } = await supabase
-      .from('formularios')
-      .delete()
-      .eq('id', id);
-
+    const { error } = await supabase.from("formularios").delete().eq("id", id);
     if (error) {
-      console.error('Error eliminando formulario:', error);
+      req.log.error({ err: error }, "Supabase error delete /formularios/:id");
       return res
         .status(500)
-        .json({ error: 'No se pudo eliminar el formulario.' });
+        .json({ error: "No se pudo eliminar el registro." });
     }
-
-    return res.status(204).send(); // sin contenido, todo ok
+    return res.status(204).send();
   } catch (err) {
-    console.error('Error inesperado DELETE /api/formularios/:id:', err);
-    return res
-      .status(500)
-      .json({ error: 'Error interno del servidor al eliminar empleado.' });
+    req.log.error({ err }, "Unexpected DELETE /formularios/:id");
+    return res.status(500).json({ error: "Error interno." });
   }
 });
 
-/**
- * PÁGINAS FRONT
- *  - index.html lo sirve directamente express.static al ir a "/"
- *  - form.html en /form
- *  - dashboard.html en /dashboard
- *  - employees.html en /empleados
- */
+// =====================
+// ====  PÁGINAS  ======
+// =====================
 
-app.get('/form', (req, res) => {
-  res.sendFile(path.join(publicPath, 'form.html'));
+// Protegidas por cookie de sesión
+app.get("/dashboard", guardPage, (req, res) => {
+  res.sendFile(path.join(publicPath, "dashboard.html"));
+});
+app.get("/empleados", guardPage, (req, res) => {
+  res.sendFile(path.join(publicPath, "employees.html"));
+});
+app.get("/form", guardPage, (req, res) => {
+  res.sendFile(path.join(publicPath, "form.html"));
 });
 
-app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(publicPath, 'dashboard.html'));
-});
-
-app.get('/empleados', (req, res) => {
-  res.sendFile(path.join(publicPath, 'employees.html'));
-});
-
-/**
- * Catch-all:
- * cualquier ruta que no exista en la API ni en las páginas específicas
- * devuelve el login (index.html).
- */
+// Catch-all → login
 app.use((req, res) => {
-  res.sendFile(path.join(publicPath, 'index.html'));
+  res.sendFile(path.join(publicPath, "index.html"));
 });
 
-// Arrancar servidor
+// --- Manejador global de errores (último) ---
+app.use((err, req, res, next) => {
+  req.log?.error(err);
+  const msg =
+    process.env.NODE_ENV === "production"
+      ? "Error interno"
+      : err.message || "Error";
+  res.status(500).json({ error: msg });
+});
+
+// --- Start ---
 app.listen(PORT, () => {
   console.log(`🚀 Servidor escuchando en http://localhost:${PORT}`);
 });

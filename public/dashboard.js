@@ -409,5 +409,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  const excelSanitize = v => (/^[=+\-@]/.test(String(v||'')) ? "'" + v : String(v||''));
+
+
   loadData();
 });

@@ -1,16 +1,150 @@
 /* public/styles.css */
-
-body {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  min-height: max(884px, 100dvh);
+/* Paleta y escala base (celeste/negro/blanco) */
+:root{
+  --primary:#0ea5e9;        /* sky-500 */
+  --primary-dark:#0284c7;   /* sky-600 */
+  --bg-light:#e0f2fe;       /* sky-100 */
+  --bg-dark:#020617;        /* slate-950 */
+  --text-dark:#0f172a;      /* slate-900 */
+  --text-light:#f8fafc;     /* slate-50 */
+  --ring:rgba(14,165,233,.4);
+  --radius-md:.75rem;       /* ~rounded-xl */
+  --radius-xl:1rem;
 }
 
-/* Iconos de Material Symbols */
-.material-symbols-outlined {
-  font-variation-settings:
-    'FILL' 0,
-    'wght' 400,
-    'GRAD' 0,
-    'opsz' 24;
+/* Tipografía ligeramente más grande y fluida */
+html{font-size:16.5px;}
+@media (min-width:640px){html{font-size:17px;}}
+@media (min-width:1024px){html{font-size:18px;}}
+
+body{
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  background:var(--bg-light);
+  color:var(--text-dark);
 }
+.dark body{background:var(--bg-dark);color:var(--text-light);}
+
+/* Tarjetas y contenedores con esquinas suaves */
+.card,.shadow-lg,.shadow-sm{border-radius:var(--radius-xl);}
+
+/* Inputs (formularios más cómodos) */
+.form-input,.form-select,.form-textarea{
+  font-size:.95rem;
+  padding:.65rem .9rem;
+  border-radius:var(--radius-md);
+  border-color:#cbd5e1;                /* slate-300 */
+  background-color:#fff;
+}
+.dark .form-input,.dark .form-select,.dark .form-textarea{
+  border-color:#334155;                /* slate-700 */
+  background-color:#0b1220;            /* ~slate-950/ */
+}
+.form-input:focus,.form-select:focus,.form-textarea:focus{
+  outline:none;
+  box-shadow:0 0 0 2px var(--ring);
+  border-color:var(--primary);
+}
+
+/* Botones: contraste alto y tamaños cómodos */
+button,.btn{font-size:.95rem;border-radius:var(--radius-md);}
+
+.bg-primary{background-color:var(--primary)!important;color:#fff!important;}
+.hover\:bg-primary\/90:hover{background-color:rgba(14,165,233,.9)!important;}
+.text-primary{color:var(--primary)!important;}
+.ring-primary\/30{box-shadow:0 0 0 2px rgba(14,165,233,.3);}
+
+/* Botones clave por id para asegurar visibilidad */
+#loginButton,#exportFilteredBtn,#editSaveBtn,#submitButton{
+  background:var(--primary);
+  color:#fff;
+  border:1px solid transparent;
+}
+#exportAllBtn,#resultClose,#editCancelBtn,#deleteCancelBtn,#reloadBtn{
+  background:#fff;
+  color:#0f172a;
+  border:1px solid #bae6fd;            /* sky-200 */
+}
+#logoutBtn{
+  background:#fee2e2;                  /* red-100 */
+  color:#b91c1c;                        /* red-700 */
+  border:1px solid #fecaca;            /* red-200 */
+}
+#goToFormBtn,#goToEmployeesBtn{
+  background:#e0f2fe;                  /* sky-100 */
+  color:#075985;                        /* sky-800 */
+  border:1px solid #bae6fd;
+}
+button:focus-visible,.btn:focus-visible{
+  outline:none; box-shadow:0 0 0 3px var(--ring);
+}
+
+/* Tablas tipo “grid” legible y táctil */
+table{font-size:.92rem;}
+th{font-weight:700;color:#0f172a;}
+.dark th{color:#e2e8f0;}
+th,td{padding:.65rem .5rem;}
+tbody tr{transition:background-color .15s ease;}
+tbody tr:hover{background:#f8fafc;}          /* slate-50 */
+.dark tbody tr:hover{background:#0f172a;}    /* slate-900 */
+
+/* Checkboxes un pelín más grandes */
+input[type="checkbox"]{transform:scale(1.05);}
+
+/* Modales más redondeados */
+#loginLoadingModal>div,
+#dashboardLoadingModal>div,
+#employeesLoadingModal>div,
+#resultModal>div,
+#confirmLeaveModal>div,
+#logoutConfirmModal>div,
+#deleteModal>div,
+#viewModal>div,
+#editModal>div{border-radius:var(--radius-xl);}
+
+/* Títulos algo más grandes */
+h1{font-size:clamp(1.6rem,2.5vw,2rem);}
+h2{font-size:clamp(1.15rem,1.7vw,1.25rem);}
+h3{font-size:clamp(1rem,1.4vw,1.125rem);}
+p,label,input,select,textarea,button{line-height:1.5;}
+
+/* Padding lateral adaptable en contenedores estrechos */
+.container,.max-w-md,.max-w-lg,.max-w-xl{padding-inline:clamp(1rem,3vw,1.5rem);}
+
+/* Ajustes móviles: compactar sin perder legibilidad */
+@media (max-width:480px){
+  th,td{padding:.5rem .4rem;}
+  .text-xs{font-size:.8rem!important;}
+  .text-sm{font-size:.9rem!important;}
+  #exportAllBtn,#exportFilteredBtn{padding:.45rem .6rem;}
+  #logoutBtn,#goToFormBtn,#goToEmployeesBtn{padding:.45rem .6rem;}
+}
+
+/* Bottom nav con mejores objetivos táctiles */
+nav a{padding-block:.35rem;}
+nav .material-symbols-outlined{font-size:1.25rem!important;}
+
+/* Iconos */
+.material-symbols-outlined{vertical-align:middle;}
+.material-symbols-outlined.text-primary{color:var(--primary)!important;}
+
+/* Acentos de borde y “ring” suaves */
+.border-sky-200{border-color:#bae6fd!important;}
+.ring-sky-100{box-shadow:inset 0 0 0 1px #e0f2fe;}
+
+/* Truncamiento visible en celdas estrechas */
+td[class*="max-w-["]{
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sombras sutiles para tarjetas claras */
+.bg-white.shadow-lg,.bg-white.shadow-sm{box-shadow:0 8px 24px -12px rgba(2,6,23,.15);}
+
+/* Barras superior e inferior con sutil separación */
+.sticky.top-0{box-shadow:0 1px 0 rgba(2,6,23,.06);}
+.fixed.bottom-0{box-shadow:0 -1px 0 rgba(2,6,23,.06);}
+
+/* Botones de acción en tabla: más “tocables” */
+td .inline-flex>button{min-height:32px;min-width:36px;}
