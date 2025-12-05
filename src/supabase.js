@@ -1,16 +1,14 @@
 // src/supabase.js
 const { createClient } = require('@supabase/supabase-js');
 
-const url =
-  process.env.SUPABASE_URL ||
-  process.env.NEXT_PUBLIC_SUPABASE_URL;
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY');
+}
 
-const key =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||   // 👈 tu .env usa este
-  process.env.SUPABASE_SERVICE_ROLE ||       // fallback
-  process.env.SUPABASE_ANON_KEY;             // último recurso
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY, // <- NO usar la anon key
+  { auth: { persistSession: false } }
+);
 
-if (!url) throw new Error('SUPABASE_URL is required.');
-if (!key) throw new Error('SUPABASE_SERVICE_ROLE(_KEY) is required.');
-
-module.exports = createClient(url, key);
+module.exports = supabase;
