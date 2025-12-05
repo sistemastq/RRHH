@@ -5,31 +5,8 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Panel de Control RRHH</title>
 
-    <!-- Tailwind + config (misma paleta que index) -->
-    <script id="tailwind-config">
-      tailwind = {
-        config: {
-          darkMode: "class",
-          theme: {
-            extend: {
-              colors: {
-                primary: "#0ea5e9",
-                "primary-dark": "#0284c7",
-                "background-light": "#e0f2fe",
-                "background-dark": "#020617",
-              },
-              fontFamily: { display: ["Manrope", "sans-serif"] },
-              borderRadius: {
-                DEFAULT: "0.25rem",
-                lg: "0.5rem",
-                xl: "0.75rem",
-                full: "9999px",
-              },
-            },
-          },
-        },
-      };
-    </script>
+    <!-- Tailwind + config (migrado a archivo externo para cumplir CSP) -->
+    <script src="/tw-config.js"></script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 
     <!-- Fuentes -->
@@ -219,7 +196,7 @@
         >
           <button
             type="button"
-            onclick="window.location.href='/form'"
+            id="quickAddBtn"
             class="flex flex-1 cursor-pointer flex-col gap-2 rounded-xl border border-sky-200 bg-white p-4 text-left transition hover:border-primary/60 hover:shadow-sm dark:border-slate-700 dark:bg-slate-900"
           >
             <span class="material-symbols-outlined text-2xl text-primary">
@@ -235,7 +212,7 @@
 
           <button
             type="button"
-            onclick="window.location.href='/empleados'"
+            id="quickManageBtn"
             class="flex flex-1 cursor-pointer flex-col gap-2 rounded-xl border border-sky-200 bg-white p-4 text-left transition hover:border-primary/60 hover:shadow-sm dark:border-slate-700 dark:bg-slate-900"
           >
             <span class="material-symbols-outlined text-2xl text-primary">
@@ -305,9 +282,7 @@
               class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700"
             >
               <table class="min-w-full border-collapse text-left text-xs">
-                <!-- thead + filtros + tbody como ya lo tienes -->
                 <thead class="bg-slate-50 dark:bg-slate-900/60">
-                  <!-- Encabezados con orden -->
                   <tr>
                     <th class="w-8 px-2 py-2 align-middle">
                       <input
@@ -597,56 +572,7 @@
       </nav>
     </div>
 
-    <!-- Tu lógica principal -->
+    <!-- JS principal (externo para cumplir CSP) -->
     <script src="/dashboard.js"></script>
-
-    <!-- JS ligero para navegación y modal de logout -->
-    <script>
-      (function () {
-        const goToEmployeesBtn = document.getElementById("goToEmployeesBtn");
-        const goToFormBtn = document.getElementById("goToFormBtn");
-        const logoutBtn = document.getElementById("logoutBtn");
-
-        const logoutModal = document.getElementById("logoutConfirmModal");
-        const logoutCancelBtn = document.getElementById("logoutCancelBtn");
-        const logoutConfirmBtn = document.getElementById("logoutConfirmBtn");
-
-        if (goToEmployeesBtn)
-          goToEmployeesBtn.addEventListener(
-            "click",
-            () => (window.location.href = "/empleados")
-          );
-        if (goToFormBtn)
-          goToFormBtn.addEventListener(
-            "click",
-            () => (window.location.href = "/form")
-          );
-
-        function openLogoutModal() {
-          logoutModal.classList.remove("hidden");
-          logoutModal.classList.add("flex");
-        }
-        function closeLogoutModal() {
-          logoutModal.classList.add("hidden");
-          logoutModal.classList.remove("flex");
-        }
-
-        if (logoutBtn) logoutBtn.addEventListener("click", openLogoutModal);
-        if (logoutCancelBtn)
-          logoutCancelBtn.addEventListener("click", closeLogoutModal);
-        if (logoutConfirmBtn) {
-          logoutConfirmBtn.addEventListener("click", () => {
-            try {
-              localStorage.removeItem("usuarioRRHH");
-            } catch {}
-            window.location.href = "/";
-          });
-        }
-
-        document.addEventListener("keydown", (e) => {
-          if (e.key === "Escape") closeLogoutModal();
-        });
-      })();
-    </script>
   </body>
 </html>
